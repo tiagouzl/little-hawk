@@ -1,6 +1,6 @@
 line-length = 120
 target-version = "py311"
 
-[lint.per-file-ignores]
-"little_hawk_transplant.py" = ["E701", "E702", "F841", "F541"]
-"little_hawk_transplant_qwen.py" = ["E401", "E702", "F401"]
+[lint]
+# Relaxed rules because scripts usam estilo compacto/CLI.
+ignore = ["E701", "E702", "E741", "E401", "F401", "F541", "F841"]
