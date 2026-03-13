@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Little Hawk SSE Demo</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; }
+    textarea { width: 100%; height: 140px; font-family: monospace; }
+    #output { white-space: pre-wrap; border: 1px solid #ccc; padding: 12px; min-height: 120px; margin-top: 12px; }
+    button { padding: 8px 14px; }
+  </style>
+</head>
+<body>
+  <h1>Little Hawk — SSE</h1>
+  <label>Prompt</label>
+  <textarea id="prompt">atenção e memória são os fundamentos</textarea>
+  <div style="margin:8px 0;">
+    <label>Max tokens: <input id="max_tokens" type="number" value="32" min="1" max="512"></label>
+    <label>Temperature: <input id="temperature" type="number" step="0.05" value="0.7" min="0" max="2"></label>
+  </div>
+  <button onclick="start()">Generate</button>
+  <div id="status"></div>
+  <div id="output"></div>
+<script>
+function start() {
+  const prompt = document.getElementById('prompt').value;
+  const max_tokens = parseInt(document.getElementById('max_tokens').value || '32', 10);
+  const temperature = parseFloat(document.getElementById('temperature').value || '0.7');
+  const out = document.getElementById('output');
+  const status = document.getElementById('status');
+  out.textContent = '';
+  status.textContent = 'connecting...';
+
+  fetch('/generate', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({prompt, max_tokens, temperature}),
+  }).then(resp => {
+    if (!resp.body) throw new Error('Streaming não suportado');
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    status.textContent = 'streaming...';
+    function pump() {
+      reader.read().then(({done, value}) => {
+        if (done) { status.textContent = 'done'; return; }
+        const chunk = decoder.decode(value, {stream: true});
+        chunk.split('\\n\\n').forEach(block => {
+          if (!block.startsWith('data:')) return;
+          try {
+            const payload = JSON.parse(block.replace(/^data:\\s*/, ''));
+            if (payload.token === '[DONE]') return;
+            out.textContent += payload.token;
+          } catch (e) { /* ignora linhas malformadas */ }
+        });
+        pump();
+      });
+    }
+    pump();
+  }).catch(err => { status.textContent = 'erro: ' + err; });
+}
+</script>
+</body>
+</html>
