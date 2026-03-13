@@ -134,7 +134,7 @@ async def generate(body: dict = Body(...)):
     top_k = int(body.get("top_k", 40))
     top_p = float(body.get("top_p", 0.92))
     rep_penalty = float(body.get("rep_penalty", 1.15))
-    gen = _stream_generator(prompt, max_tokens, temperature, top_k, top_p, rep_penalty)
+    gen = _stream_sse(prompt, max_tokens, temperature, top_k, top_p, rep_penalty)
     return StreamingResponse(gen, media_type="text/event-stream")
 
 
