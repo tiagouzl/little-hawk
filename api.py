@@ -11,10 +11,12 @@ não existir, cai no modo demo (pesos aleatórios).
 import os
 import asyncio
 import threading
+import json
 from typing import AsyncGenerator
 
-from fastapi import FastAPI, Body, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
 from little_hawk_cli import (
     BPETokenizer,
@@ -97,9 +99,10 @@ def _stream_sse(prompt: str, max_tokens: int, temperature: float,
     def producer():
         try:
             for token in _blocking_stream(prompt, max_tokens, temperature, top_k, top_p, rep_penalty):
-                asyncio.run_coroutine_threadsafe(queue.put(f"data: {token}\n\n"), loop)
+                payload = json.dumps({"token": token}, ensure_ascii=False)
+                asyncio.run_coroutine_threadsafe(queue.put(f"data: {payload}\n\n"), loop)
         finally:
-            asyncio.run_coroutine_threadsafe(queue.put("data: [DONE]\n\n"), loop)
+            asyncio.run_coroutine_threadsafe(queue.put("data: {\"token\": \"[DONE]\"}\n\n"), loop)
             asyncio.run_coroutine_threadsafe(queue.put(None), loop)
 
     threading.Thread(target=producer, daemon=True).start()
@@ -124,17 +127,20 @@ async def health():
     return {"status": "ok", "mode": "weights" if os.path.exists(DEFAULT_WEIGHTS) else "demo"}
 
 
+class GenerateRequest(BaseModel):
+    prompt: str = Field(..., description="Texto de entrada")
+    max_tokens: int = Field(80, ge=1, le=2048)
+    temperature: float = Field(0.7, ge=0.0)
+    top_k: int = Field(40, ge=1)
+    top_p: float = Field(0.92, ge=0.0, le=1.0)
+    rep_penalty: float = Field(1.15, ge=0.0)
+
+
 @app.post("/generate")
-async def generate(body: dict = Body(...)):
-    prompt = body.get("prompt")
-    if not prompt:
+async def generate(req: GenerateRequest):
+    if not req.prompt:
         raise HTTPException(400, "prompt é obrigatório")
-    max_tokens = int(body.get("max_tokens", 80))
-    temperature = float(body.get("temperature", 0.7))
-    top_k = int(body.get("top_k", 40))
-    top_p = float(body.get("top_p", 0.92))
-    rep_penalty = float(body.get("rep_penalty", 1.15))
-    gen = _stream_sse(prompt, max_tokens, temperature, top_k, top_p, rep_penalty)
+    gen = _stream_sse(req.prompt, req.max_tokens, req.temperature, req.top_k, req.top_p, req.rep_penalty)
     return StreamingResponse(gen, media_type="text/event-stream")
 
 
