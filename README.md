@@ -143,6 +143,26 @@ python little_hawk_cli.py \
 
 ---
 
+## API FastAPI (servidor opcional)
+
+Suba o servidor:
+
+```bash
+make run-api
+```
+
+Chame o endpoint `/generate` (SSE):
+
+```bash
+curl -N -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"atenção e memória","max_tokens":32}'
+```
+
+Saída chega token a token (text/event-stream). Se `little_hawk_weights.npz` não existir, o servidor cai em modo demo.
+
+---
+
 ## Telemetria em tempo real
 
 O CLI exibe um painel atualizado a cada 8 tokens:
