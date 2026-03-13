@@ -10,10 +10,11 @@ não existir, cai no modo demo (pesos aleatórios).
 """
 import os
 import asyncio
+import threading
 from typing import AsyncGenerator
 
 from fastapi import FastAPI, Body, HTTPException
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse
 
 from little_hawk_cli import (
     BPETokenizer,
@@ -58,11 +59,10 @@ def load_model(weights_path: str | None = None):
     _hawk = LittleHawkInference(tokenizer=tok, engine=eng)
 
 
-def _stream_generator(prompt: str, max_tokens: int, temperature: float,
-                      top_k: int, top_p: float, rep_penalty: float) -> AsyncGenerator[str, None]:
-    hawk = _hawk
-    tok = _tokenizer
-    eng = _engine
+def _blocking_stream(prompt: str, max_tokens: int, temperature: float,
+                     top_k: int, top_p: float, rep_penalty: float):
+    """Gerador síncrono de tokens (CPU-bound)."""
+    hawk = _hawk; tok = _tokenizer; eng = _engine
     caches = eng.init_cache(); win_ptr = 0
     ids = tok.encode(prompt, add_bos=True)
     generated = [t for t in ids if t not in (tok.bos_id, tok.eos_id)]
@@ -71,28 +71,47 @@ def _stream_generator(prompt: str, max_tokens: int, temperature: float,
         n_ctx += 1
         logits, caches, win_ptr, _ = eng.step(tid, caches, win_ptr, n_ctx)
         last_logits = logits[0]
-    pl = 0
-    async def gen():
-        nonlocal caches, win_ptr, n_ctx, last_logits
-        for step in range(max_tokens):
-            nid = hawk._sample(last_logits.copy(), temperature, top_k, top_p,
-                               rep_penalty=rep_penalty, generated=generated)
-            n_ctx += 1
-            logits, caches, win_ptr, _ = eng.step(nid, caches, win_ptr, n_ctx)
-            last_logits = logits[0]
-            if n_ctx > eng.max_cap:
-                pass
-            if nid == tok.eos_id:
+    for _ in range(max_tokens):
+        nid = hawk._sample(last_logits.copy(), temperature, top_k, top_p,
+                           rep_penalty=rep_penalty, generated=generated)
+        n_ctx += 1
+        logits, caches, win_ptr, _ = eng.step(nid, caches, win_ptr, n_ctx)
+        last_logits = logits[0]
+        if nid == tok.eos_id:
+            break
+        generated.append(nid)
+        if tok._donor_mode and getattr(tok, "_hf_tok", None):
+            decoded = tok._hf_tok.decode([nid])
+        else:
+            ts = tok.id_to_token.get(nid, tok.UNK)
+            decoded = ts.replace("Ġ", " ").replace("Ċ", "\n").replace(tok.SPACE, " ")
+        yield decoded
+
+
+def _stream_sse(prompt: str, max_tokens: int, temperature: float,
+                top_k: int, top_p: float, rep_penalty: float) -> AsyncGenerator[str, None]:
+    """Produz SSE sem bloquear o event loop, usando thread para CPU-bound."""
+    loop = asyncio.get_event_loop()
+    queue: asyncio.Queue[str | None] = asyncio.Queue()
+
+    def producer():
+        try:
+            for token in _blocking_stream(prompt, max_tokens, temperature, top_k, top_p, rep_penalty):
+                asyncio.run_coroutine_threadsafe(queue.put(f"data: {token}\n\n"), loop)
+        finally:
+            asyncio.run_coroutine_threadsafe(queue.put("data: [DONE]\n\n"), loop)
+            asyncio.run_coroutine_threadsafe(queue.put(None), loop)
+
+    threading.Thread(target=producer, daemon=True).start()
+
+    async def consumer():
+        while True:
+            chunk = await queue.get()
+            if chunk is None:
                 break
-            generated.append(nid)
-            if tok._donor_mode and getattr(tok, "_hf_tok", None):
-                decoded = tok._hf_tok.decode([nid])
-            else:
-                ts = tok.id_to_token.get(nid, tok.UNK)
-                decoded = ts.replace("Ġ", " ").replace("Ċ", "\n").replace(tok.SPACE, " ")
-            yield f"data: {decoded}\n\n"
-        yield "data: [DONE]\n\n"
-    return gen()
+            yield chunk
+
+    return consumer()
 
 
 @app.on_event("startup")
