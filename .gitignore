@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+*.log
+
+# Virtual env
+venv/
+.env/
+.venv/
+
+# Ruff cache
+.ruff_cache/
+
+# Data / weights
+*.npz
+*_meta.json
+*.safetensors
+.cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,5 @@
+numpy
+safetensors
+huggingface_hub
+tokenizers
+colorama
