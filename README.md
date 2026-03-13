@@ -163,6 +163,19 @@ Saída chega token a token (text/event-stream). Se `little_hawk_weights.npz` nã
 
 ---
 
+## Docker
+
+Build e run:
+
+```bash
+docker build -t little-hawk .
+docker run --rm -p 8000:8000 little-hawk
+```
+
+Depois acesse o mesmo endpoint `/generate` via curl ou navegador.
+
+---
+
 ## Telemetria em tempo real
 
 O CLI exibe um painel atualizado a cada 8 tokens:
