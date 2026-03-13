@@ -1,63 +1,253 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <title>Little Hawk SSE Demo</title>
+  <title>Little Hawk · Live Inference</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; }
-    textarea { width: 100%; height: 140px; font-family: monospace; }
-    #output { white-space: pre-wrap; border: 1px solid #ccc; padding: 12px; min-height: 120px; margin-top: 12px; }
-    button { padding: 8px 14px; }
+    :root {
+      --bg: radial-gradient(circle at 20% 20%, rgba(99,102,241,0.25), transparent 35%),
+            radial-gradient(circle at 80% 0%, rgba(16,185,129,0.18), transparent 30%),
+            #0b1220;
+      --card: rgba(255,255,255,0.08);
+      --muted: #9ca3af;
+      --accent: #22d3ee;
+      --accent2: #a855f7;
+      --success: #22c55e;
+      --error: #f43f5e;
+      --mono: "SFMono-Regular", Consolas, Menlo, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0; min-height: 100vh;
+      background: var(--bg);
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      color: #e5e7eb;
+    }
+    .shell {
+      max-width: 1180px; margin: 32px auto; padding: 0 20px;
+      display: grid; gap: 20px; grid-template-columns: 2fr 1.3fr;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 18px;
+      backdrop-filter: blur(10px);
+      padding: 18px 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+    h1 { margin: 0 0 8px; font-size: 26px; letter-spacing: -0.02em; }
+    p.muted { margin: 0; color: var(--muted); }
+    label { display: block; margin: 10px 0 6px; font-weight: 600; }
+    textarea, input, select, button {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 10px 12px;
+      color: #e5e7eb;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    textarea { min-height: 120px; resize: vertical; font-family: var(--mono); }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .controls { display: flex; gap: 10px; margin-top: 12px; }
+    .controls button {
+      flex: 1;
+      background: linear-gradient(120deg, var(--accent), var(--accent2));
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .controls button:active { transform: translateY(1px); }
+    #output { min-height: 220px; white-space: pre-wrap; font-family: var(--mono); line-height: 1.4; }
+    .bar {
+      height: 10px; background: rgba(255,255,255,0.08);
+      border-radius: 999px; overflow: hidden;
+    }
+    .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .pill { padding: 4px 10px; border-radius: 999px; font-size: 12px; background: rgba(255,255,255,0.08); }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .pill.ok { background: rgba(34,197,94,0.15); color: #bbf7d0; }
+    .pill.warn { background: rgba(234,179,8,0.15); color: #fef08a; }
+    a { color: var(--accent); }
   </style>
 </head>
 <body>
-  <h1>Little Hawk — SSE</h1>
-  <label>Prompt</label>
-  <textarea id="prompt">atenção e memória são os fundamentos</textarea>
-  <div style="margin:8px 0;">
-    <label>Max tokens: <input id="max_tokens" type="number" value="32" min="1" max="512"></label>
-    <label>Temperature: <input id="temperature" type="number" step="0.05" value="0.7" min="0" max="2"></label>
-  </div>
-  <button onclick="start()">Generate</button>
-  <div id="status"></div>
-  <div id="output"></div>
-<script>
-function start() {
-  const prompt = document.getElementById('prompt').value;
-  const max_tokens = parseInt(document.getElementById('max_tokens').value || '32', 10);
-  const temperature = parseFloat(document.getElementById('temperature').value || '0.7');
-  const out = document.getElementById('output');
-  const status = document.getElementById('status');
-  out.textContent = '';
-  status.textContent = 'connecting...';
+  <div class="shell">
+    <div class="card">
+      <h1>Little Hawk — Live Streaming</h1>
+      <p class="muted">Motor NumPy com cache O(1) + RoPE freeze. Gere texto e veja métricas em tempo real.</p>
 
-  fetch('/generate', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({prompt, max_tokens, temperature}),
-  }).then(resp => {
-    if (!resp.body) throw new Error('Streaming não suportado');
+      <label for="prompt">Prompt</label>
+      <textarea id="prompt">atenção e memória são os fundamentos</textarea>
+
+      <div class="grid-3">
+        <div>
+          <label>Max tokens</label>
+          <input id="max_tokens" type="number" value="64" min="1" max="1024">
+        </div>
+        <div>
+          <label>Temp</label>
+          <input id="temperature" type="number" step="0.05" value="0.7" min="0" max="2">
+        </div>
+        <div>
+          <label>Top-p</label>
+          <input id="top_p" type="number" step="0.01" value="0.92" min="0" max="1">
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top:10px;">
+        <div>
+          <label>Top-k</label>
+          <input id="top_k" type="number" value="40" min="1" max="50000">
+        </div>
+        <div>
+          <label>Rep penalty</label>
+          <input id="rep_penalty" type="number" step="0.05" value="1.15" min="0" max="5">
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="go">Gerar</button>
+        <button id="stop" style="background:#ef4444;" disabled>Parar</button>
+      </div>
+
+      <div id="output" class="card" style="margin-top:14px; background: rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05);"></div>
+    </div>
+
+    <div class="card" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="row">
+        <div class="pill" id="mode">detectando...</div>
+        <div class="pill" id="status"><span class="status-dot" style="background:#facc15"></span>idle</div>
+      </div>
+      <div>
+        <div class="row"><span class="muted">Tokens gerados</span><span id="tok_count">0</span></div>
+        <div class="bar"><span id="prog" style="width:0%"></span></div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="muted">Throughput</div>
+          <div id="tps" style="font-size:22px; font-weight:700;">– tok/s</div>
+        </div>
+        <div>
+          <div class="muted">Duração</div>
+          <div id="elapsed" style="font-size:22px; font-weight:700;">– s</div>
+        </div>
+      </div>
+      <div>
+        <div class="muted">Último token</div>
+        <div id="last_token" style="font-family:var(--mono);"></div>
+      </div>
+      <div class="muted" style="font-size:13px;">Use `make run-api` ou Docker e acesse este arquivo servindo estático (ex.: `python -m http.server`).</div>
+    </div>
+  </div>
+
+<script>
+const state = {
+  controller: null,
+  startTime: null,
+  tokens: 0,
+};
+
+async function detectMode() {
+  try {
+    const resp = await fetch('/health');
+    const j = await resp.json();
+    const pill = document.getElementById('mode');
+    pill.textContent = j.mode || 'demo';
+    pill.className = 'pill ' + (j.mode === 'weights' ? 'ok' : 'warn');
+  } catch (e) {
+    const pill = document.getElementById('mode');
+    pill.textContent = 'offline'; pill.className = 'pill warn';
+  }
+}
+
+function updateStatus(txt, color) {
+  const el = document.getElementById('status');
+  const dot = el.querySelector('.status-dot');
+  dot.style.background = color; el.innerHTML = `<span class="status-dot" style="background:${color}"></span>${txt}`;
+}
+
+function setButtons(running) {
+  document.getElementById('go').disabled = running;
+  document.getElementById('stop').disabled = !running;
+}
+
+async function start() {
+  const prompt = document.getElementById('prompt').value;
+  const max_tokens = +document.getElementById('max_tokens').value || 64;
+  const temperature = +document.getElementById('temperature').value || 0.7;
+  const top_k = +document.getElementById('top_k').value || 40;
+  const top_p = +document.getElementById('top_p').value || 0.92;
+  const rep_penalty = +document.getElementById('rep_penalty').value || 1.15;
+
+  const out = document.getElementById('output');
+  out.textContent = '';
+  state.tokens = 0; state.startTime = performance.now();
+  document.getElementById('tok_count').textContent = '0';
+  document.getElementById('tps').textContent = '– tok/s';
+  document.getElementById('elapsed').textContent = '– s';
+  document.getElementById('prog').style.width = '0%';
+  document.getElementById('last_token').textContent = '';
+
+  setButtons(true); updateStatus('streaming', '#22d3ee');
+
+  state.controller = new AbortController();
+  try {
+    const resp = await fetch('/generate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({prompt, max_tokens, temperature, top_k, top_p, rep_penalty}),
+      signal: state.controller.signal,
+    });
+    if (!resp.ok || !resp.body) throw new Error('resposta inválida');
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
-    status.textContent = 'streaming...';
-    function pump() {
-      reader.read().then(({done, value}) => {
-        if (done) { status.textContent = 'done'; return; }
-        const chunk = decoder.decode(value, {stream: true});
-        chunk.split('\\n\\n').forEach(block => {
-          if (!block.startsWith('data:')) return;
-          try {
-            const payload = JSON.parse(block.replace(/^data:\\s*/, ''));
-            if (payload.token === '[DONE]') return;
-            out.textContent += payload.token;
-          } catch (e) { /* ignora linhas malformadas */ }
-        });
-        pump();
+    const read = () => reader.read().then(({done, value}) => {
+      if (done) { finish(); return; }
+      const chunk = decoder.decode(value, {stream:true});
+      chunk.split('\n\n').forEach(block => {
+        if (!block.startsWith('data:')) return;
+        const payloadStr = block.replace(/^data:\s*/, '');
+        try {
+          const payload = JSON.parse(payloadStr);
+          if (payload.token === '[DONE]') return;
+          state.tokens++;
+          out.textContent += payload.token;
+          document.getElementById('last_token').textContent = payload.token;
+          document.getElementById('tok_count').textContent = state.tokens;
+          document.getElementById('prog').style.width = `${Math.min(100, (state.tokens/max_tokens)*100)}%`;
+          const elapsedSec = (performance.now() - state.startTime)/1000;
+          document.getElementById('elapsed').textContent = `${elapsedSec.toFixed(2)} s`;
+          if (elapsedSec>0) document.getElementById('tps').textContent = `${(state.tokens/elapsedSec).toFixed(2)} tok/s`;
+        } catch {}
       });
-    }
-    pump();
-  }).catch(err => { status.textContent = 'erro: ' + err; });
+      return read();
+    });
+    read();
+  } catch (e) {
+    updateStatus('erro', '#f43f5e'); setButtons(false);
+  }
 }
+
+function finish() {
+  setButtons(false);
+  updateStatus('idle', '#22c55e');
+  const elapsedSec = (performance.now() - state.startTime)/1000;
+  document.getElementById('elapsed').textContent = `${elapsedSec.toFixed(2)} s`;
+  if (elapsedSec>0 && state.tokens>0) document.getElementById('tps').textContent = `${(state.tokens/elapsedSec).toFixed(2)} tok/s`;
+}
+
+function stop() {
+  if (state.controller) state.controller.abort();
+  finish();
+}
+
+document.getElementById('go').addEventListener('click', start);
+document.getElementById('stop').addEventListener('click', stop);
+detectMode();
 </script>
 </body>
 </html>
