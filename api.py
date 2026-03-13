@@ -15,7 +15,7 @@ import json
 from typing import AsyncGenerator
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
 from little_hawk_cli import (
@@ -142,6 +142,15 @@ async def generate(req: GenerateRequest):
         raise HTTPException(400, "prompt é obrigatório")
     gen = _stream_sse(req.prompt, req.max_tokens, req.temperature, req.top_k, req.top_p, req.rep_penalty)
     return StreamingResponse(gen, media_type="text/event-stream")
+
+
+@app.get("/demo", response_class=HTMLResponse)
+async def demo():
+    from pathlib import Path
+    html_path = Path(__file__).parent / "sse_demo.html"
+    if not html_path.exists():
+        raise HTTPException(404, "sse_demo.html não encontrado")
+    return html_path.read_text(encoding="utf-8")
 
 
 if __name__ == "__main__":
