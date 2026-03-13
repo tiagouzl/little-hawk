@@ -174,6 +174,16 @@ docker run --rm -p 8000:8000 little-hawk
 
 Depois acesse o mesmo endpoint `/generate` via curl ou navegador.
 
+> ⚠️ Pesos não são copiados para a imagem (ver `.dockerignore`). Para servir um modelo real, monte os arquivos de pesos e meta como volume ou aponte `LITTLE_HAWK_WEIGHTS`:
+>
+> ```bash
+> docker run --rm -p 8000:8000 \
+>   -v $PWD/little_hawk_weights.npz:/app/little_hawk_weights.npz \
+>   -v $PWD/little_hawk_weights_meta.json:/app/little_hawk_weights_meta.json \
+>   -e LITTLE_HAWK_WEIGHTS=/app/little_hawk_weights.npz \
+>   little-hawk
+> ```
+
 ---
 
 ## Telemetria em tempo real
