@@ -1,0 +1,7 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.per-file-ignores]
+"little_hawk_transplant.py" = ["E701", "E702", "F841", "F541"]
+"little_hawk_transplant_qwen.py" = ["E401", "E702", "F401"]
