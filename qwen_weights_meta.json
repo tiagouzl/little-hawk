@@ -1,0 +1,14 @@
+{
+  "donor": "Qwen/Qwen2.5-0.5B",
+  "d_model": 896,
+  "n_heads": 14,
+  "n_kv_heads": 2,
+  "d_k": 64,
+  "intermediate": 4864,
+  "n_layers": 24,
+  "vocab_size": 151936,
+  "rope_base": 1000000.0,
+  "bos_id": 151643,
+  "eos_id": 151645,
+  "has_bias": true
+}

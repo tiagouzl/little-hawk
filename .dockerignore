@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.npz
+*_meta.json
+*.safetensors
+venv/
+.git
+.gitignore
