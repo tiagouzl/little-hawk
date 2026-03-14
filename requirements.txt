@@ -5,3 +5,4 @@ tokenizers
 colorama
 fastapi
 uvicorn[standard]
+pytest

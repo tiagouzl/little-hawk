@@ -51,6 +51,55 @@ Little Hawk StreamingKVCache:
 
 ---
 
+## Estrutura do Projeto
+
+O código foi refatorado em módulos para melhor manutenção e testes:
+
+```
+little-hawk/
+├── cli/              # Interface de linha de comando
+│   ├── __init__.py
+│   └── main.py       # CLI com subcomandos
+├── engine/           # Motor de inferência
+│   ├── __init__.py
+│   ├── transformer.py # LlamaLayer (atenção + MLP)
+│   └── engine.py      # MultiLayerEngine
+├── runtime/          # Componentes de runtime
+│   ├── __init__.py
+│   ├── tokenizer.py   # BPETokenizer
+│   └── inference.py   # LittleHawkInference
+├── utils/            # Utilitários compartilhados
+│   ├── __init__.py
+│   ├── colors.py      # Constantes de cores
+│   ├── config.py      # Configurações padrão
+│   └── helpers.py     # Funções auxiliares
+├── tests/            # Testes unitários
+│   ├── test_tokenizer.py
+│   └── test_engine.py
+├── little_hawk_cli.py    # Wrapper CLI (compatibilidade)
+├── api.py                # API FastAPI
+└── ...
+```
+
+---
+
+## Testes
+
+Execute os testes unitários:
+
+```bash
+make test
+# ou
+python3 -m pytest tests/ -v
+```
+
+Os testes cobrem:
+- Treino e encode/decode do tokenizer BPE
+- Inicialização e step do motor
+- Persistência de vocabulário
+
+---
+
 ## Modelos suportados
 
 | Modelo | Params | RAM (.npz) | Latência (CPU) | Idiomas |
@@ -81,7 +130,7 @@ pip install numpy safetensors huggingface_hub tokenizers
 Valida o pipeline completo imediatamente:
 
 ```bash
-python little_hawk_cli.py --prompt "hello world"
+python little_hawk_cli.py infer --prompt "hello world"
 ```
 
 Validação rápida (sem inferência) — garante que os scripts compilam:
@@ -109,7 +158,7 @@ ruff format .
 python little_hawk_transplant.py --layers 30
 
 # Inferência
-python little_hawk_cli.py \
+python little_hawk_cli.py infer \
   --weights little_hawk_weights.npz \
   --prompt "attention and memory are the foundations of"
 ```
@@ -121,24 +170,58 @@ python little_hawk_cli.py \
 python little_hawk_transplant_qwen.py
 
 # Inferência
-python little_hawk_cli.py \
+python little_hawk_cli.py infer \
   --weights qwen_weights.npz \
   --prompt "atenção e memória são os fundamentos"
 ```
 
 ---
 
-## Parâmetros CLI
+## Comandos CLI
+
+O CLI agora usa subcomandos para melhor organização:
+
+```bash
+# Ver ajuda geral
+python little_hawk_cli.py --help
+
+# Ver ajuda de um subcomando específico
+python little_hawk_cli.py infer --help
+```
+
+### Subcomando `infer`
+
+Executa inferência com o modelo:
 
 ```
 --weights       Caminho para o .npz (omitir = modo demo)
---prompt        Texto de entrada
+--prompt        Texto de entrada (obrigatório)
 --max-tokens    Tokens a gerar (padrão: 80)
 --temperature   Temperatura de amostragem (padrão: 0.7)
 --top-k         Top-K sampling (padrão: 40)
 --top-p         Nucleus sampling (padrão: 0.92)
 --rep-penalty   Penalidade de repetição (padrão: 1.15; 1.0 desativa)
 --no-panel      Sem painel de telemetria em tempo real
+```
+
+### Subcomando `transplant`
+
+Transplanta pesos de modelo HuggingFace:
+
+```
+--model         ID do modelo HF (ex: smollm-135m)
+--layers        Número de camadas a extrair
+--output        Nome do arquivo .npz de saída
+```
+
+### Subcomando `api`
+
+Inicia servidor FastAPI:
+
+```
+--weights       Caminho para o .npz
+--host          Host do servidor (padrão: 0.0.0.0)
+--port          Porta do servidor (padrão: 8000)
 ```
 
 ---
