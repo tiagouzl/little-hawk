@@ -1,5 +1,15 @@
-[![CI](https://github.com/tiagouzl/little-hawk/actions/workflows/ci.yml/badge.svg)](https://github.com/tiagouzl/little-hawk/actions/workflows/ci.yml)
-# 🦅 Little Hawk
+
+<div align="center">
+  <h1>🦅 Little Hawk</h1>
+  <p><b>LLM streaming engine em Python/NumPy puro</b></p>
+  <p>
+    <a href="https://github.com/tiagouzl/little-hawk/actions/workflows/ci.yml"><img src="https://github.com/tiagouzl/little-hawk/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="#licenca"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT License"></a>
+    <a href="#api-fastapi"><img src="https://img.shields.io/badge/api-fastapi-blue.svg" alt="FastAPI"></a>
+    <a href="#estrutura-do-projeto"><img src="https://img.shields.io/badge/modular-estrutura-blue.svg" alt="Modular"></a>
+  </p>
+  <p>Sem PyTorch. Sem CUDA. Sem frameworks. Só matemática.</p>
+</div>
 
 > Motor de inferência LLM streaming construído do zero em Python/NumPy.  
 > Sem PyTorch. Sem CUDA. Sem frameworks. Só matemática.
@@ -14,7 +24,8 @@ attention and memory are the foundations of →
 
 ---
 
-## O que é
+
+## Visão geral
 
 Little Hawk é uma implementação manual e completa de inferência autoregressiva para modelos da família LLaMA/Qwen. O objetivo não foi criar mais um wrapper — foi entender e reconstruir cada peça da pilha de inferência sem abstrações escondendo a matemática.
 
@@ -51,35 +62,85 @@ Little Hawk StreamingKVCache:
 
 ---
 
-## Estrutura do Projeto
+## Estrutura do projeto
+## Como contribuir
 
-O código foi refatorado em módulos para melhor manutenção e testes:
+Contribuições são bem-vindas! Para colaborar:
+
+1. Fork este repositório
+2. Crie um branch: `git checkout -b minha-feature`
+3. Faça suas alterações e adicione testes
+4. Rode `ruff check .` e `pytest`
+5. Envie um PR explicando sua motivação
+
+Sugestões, issues e discussões são incentivadas!
+
+## Links úteis
+
+- [Documentação oficial do FastAPI](https://fastapi.tiangolo.com/)
+- [NumPy](https://numpy.org/)
+- [HuggingFace Hub](https://huggingface.co/docs/hub/index)
+- [Tokenizers](https://github.com/huggingface/tokenizers)
+
+
+little-hawk/
+
+Projeto modular e organizado para facilitar manutenção, testes e extensibilidade:
 
 ```
 little-hawk/
-├── cli/              # Interface de linha de comando
-│   ├── __init__.py
-│   └── main.py       # CLI com subcomandos
-├── engine/           # Motor de inferência
-│   ├── __init__.py
-│   ├── transformer.py # LlamaLayer (atenção + MLP)
-│   └── engine.py      # MultiLayerEngine
-├── runtime/          # Componentes de runtime
-│   ├── __init__.py
-│   ├── tokenizer.py   # BPETokenizer
-│   └── inference.py   # LittleHawkInference
-├── utils/            # Utilitários compartilhados
-│   ├── __init__.py
-│   ├── colors.py      # Constantes de cores
-│   ├── config.py      # Configurações padrão
-│   └── helpers.py     # Funções auxiliares
-├── tests/            # Testes unitários
-│   ├── test_tokenizer.py
-│   └── test_engine.py
+├── api/                  # Servidor FastAPI (api/server.py)
+├── cli/                  # Interface de linha de comando
+├── engine/               # Motor de inferência
+├── runtime/              # Tokenizer e núcleo de inferência
+├── utils/                # Utilitários e configs
+├── scripts/              # Scripts utilitários (ex: download de pesos)
+├── examples/             # Exemplos de uso (ex: demo.py)
+├── docs/                 # Documentação
+├── data/                 # Dados/corpus/modelos (gitignored)
+├── tests/                # Testes unitários
 ├── little_hawk_cli.py    # Wrapper CLI (compatibilidade)
-├── api.py                # API FastAPI
-└── ...
+├── setup.py              # Instalação local via pip
+└── README.md
 ```
+## Instalação via pip
+
+```bash
+pip install -e .
+```
+
+## API FastAPI
+
+Suba o servidor:
+
+```bash
+uvicorn api.server:app --reload
+```
+
+Exemplo de requisição:
+
+```bash
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"atenção e memória","max_tokens":32}'
+```
+
+## Scripts utilitários
+
+Baixe pesos de um modelo HuggingFace:
+
+```bash
+python scripts/download_weights.py <repo_id> <filename>
+```
+
+## Exemplos
+
+Execute um exemplo de inferência:
+
+```bash
+python examples/demo.py
+```
+
 
 ---
 
@@ -326,15 +387,7 @@ OS:  Linux Mint 21 XFCE
 ---
 
 ## Estrutura do projeto
-
-```
 little-hawk/
-├── little_hawk_cli.py              # Motor de inferência + CLI
-├── little_hawk_transplant.py       # Extrator SmolLM-135M → .npz
-├── little_hawk_transplant_qwen.py  # Extrator Qwen2.5-0.5B → .npz
-├── requirements.txt
-└── README.md
-```
 
 Os arquivos `.npz` e `_meta.json` gerados pelos transplants não são versionados (`.gitignore`). Cada usuário extrai localmente a partir dos modelos em cache do HuggingFace.
 
@@ -352,4 +405,4 @@ Os arquivos `.npz` e `_meta.json` gerados pelos transplants não são versionado
 
 ## Licença
 
-MIT
+Distribuído sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
