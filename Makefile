@@ -1,10 +1,7 @@
 PY ?= python3
 
 check:
-	$(PY) -m py_compile little_hawk_cli.py little_hawk_transplant.py little_hawk_transplant_qwen.py api.py
-
-test:
-	$(PY) -m pytest tests/ -v
+	$(PY) -m py_compile little_hawk_cli.py little_hawk_transplant.py little_hawk_transplant_qwen.py api/server.py cli/main.py
 
 lint:
 	@command -v ruff >/dev/null 2>&1 && ruff check . || (echo "ruff não encontrado; instale com 'pip install ruff' para lint" && exit 1)
@@ -15,7 +12,10 @@ fmt:
 fmt-check:
 	@command -v ruff >/dev/null 2>&1 && ruff format --check . || (echo "ruff não encontrado; instale com 'pip install ruff' para formatar" && exit 1)
 
+test:
+	$(PY) -m pytest tests/ -v
+
 run-api:
 	uvicorn api:app --host 0.0.0.0 --port 8000
 
-.PHONY: check test lint fmt fmt-check run-api
+.PHONY: check lint fmt fmt-check test run-api

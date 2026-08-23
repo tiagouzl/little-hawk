@@ -1,7 +1,17 @@
 line-length = 120
 target-version = "py311"
-# Scripts legados usam estilo compacto intencional — fora do formatador.
-extend-exclude = ["little_hawk_cli.py", "little_hawk_transplant.py", "little_hawk_transplant_qwen.py"]
+# Módulos de estilo compacto intencional — fora do formatador.
+extend-exclude = [
+    "engine/",
+    "runtime/",
+    "cli/main.py",
+    "utils/",
+    "setup.py",
+    "examples/",
+    "scripts/",
+    "little_hawk_transplant.py",
+    "little_hawk_transplant_qwen.py",
+]
 
 [lint]
 # Relaxed rules because scripts usam estilo compacto/CLI.

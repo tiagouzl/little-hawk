@@ -12,7 +12,7 @@ os.environ["LITTLE_HAWK_WEIGHTS"] = "/nonexistent/little_hawk_weights.npz"
 
 from fastapi.testclient import TestClient
 
-import api
+import api.server as api
 
 
 @pytest.fixture(scope="module")

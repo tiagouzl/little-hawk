@@ -8,7 +8,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from little_hawk import CORPUS, BPETokenizer, LittleHawkInference, MultiLayerEngine
+from engine.engine import MultiLayerEngine
+from runtime.inference import LittleHawkInference
+from runtime.tokenizer import CORPUS, BPETokenizer
 
 
 @pytest.fixture()
@@ -104,26 +106,25 @@ class TestWeightValidation:
 
 class TestSampling:
     def test_deterministic_with_seed(self, engine):
-        _, eng = engine
-        hawk = LittleHawkInference(tokenizer=None, engine=eng)
-        rng_logits = np.random.default_rng(0).normal(size=eng.V)
+        from runtime.inference import Sampler, SamplingConfig
+
+        _ = Sampler  # sampling agora vive em runtime.inference
+        s = Sampler(SamplingConfig(temperature=0.8))
+        rng_logits = np.random.default_rng(0).normal(size=engine[1].V)
         np.random.seed(123)
-        a = [hawk._sample(rng_logits.copy(), temperature=0.8) for _ in range(20)]
+        a = [s.sample(rng_logits.copy()) for _ in range(20)]
         np.random.seed(123)
-        b = [hawk._sample(rng_logits.copy(), temperature=0.8) for _ in range(20)]
+        b = [s.sample(rng_logits.copy()) for _ in range(20)]
         assert a == b
 
     def test_rep_penalty_discourages_repeat(self, engine):
-        _, eng = engine
-        hawk = LittleHawkInference(tokenizer=None, engine=eng)
+        from runtime.inference import Sampler, SamplingConfig
+
+        eng = engine[1]
+        s_base = Sampler(SamplingConfig(rep_penalty=1.0))
+        s_pen = Sampler(SamplingConfig(rep_penalty=2.0))
         logits = np.zeros(eng.V)
         logits[3] = 5.0
-        base = sum(hawk._sample(logits.copy(), temperature=1.0, rep_penalty=1.0) == 3 for _ in range(500)) / 500
-        pen = (
-            sum(
-                hawk._sample(logits.copy(), temperature=1.0, rep_penalty=2.0, generated=[3] * 10) == 3
-                for _ in range(500)
-            )
-            / 500
-        )
+        base = sum(s_base.sample(logits.copy()) == 3 for _ in range(500)) / 500
+        pen = sum(s_pen.sample(logits.copy(), generated=[3] * 10) == 3 for _ in range(500)) / 500
         assert pen < base * 0.5  # penalidade derruba a prob. ao menos à metade

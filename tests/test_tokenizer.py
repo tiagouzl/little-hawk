@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from little_hawk import CORPUS, BPETokenizer, StreamDecoder
+from runtime.tokenizer import CORPUS, BPETokenizer, StreamDecoder
 
 
 class TestBPETokenizer:

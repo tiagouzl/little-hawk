@@ -19,7 +19,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 torch = pytest.importorskip("torch", reason="torch não instalado")
 transformers = pytest.importorskip("transformers", reason="transformers não instalado")
 
-from little_hawk import BPETokenizer, MultiLayerEngine
+from engine.engine import MultiLayerEngine
+from runtime.tokenizer import BPETokenizer
 
 ROOT = Path(__file__).resolve().parent.parent
 NPZ = ROOT / "little_hawk_weights.npz"

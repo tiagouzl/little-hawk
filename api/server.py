@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""API FastAPI simples para o Little Hawk.
+"""API FastAPI para o Little Hawk.
 
 - /health         → status JSON
 - /generate (POST)→ text/event-stream (SSE) com tokens gerados
   body: {"prompt": "...", "max_tokens": 80, "temperature": 0.7, "top_k": 40, "top_p": 0.92, "rep_penalty": 1.15}
 
-Reutiliza o motor do pacote little_hawk/. Se little_hawk_weights.npz
-não existir, cai no modo demo (pesos aleatórios).
+Reutiliza os módulos runtime/ e engine/. Se LITTLE_HAWK_WEIGHTS não existir,
+cai no modo demo (pesos aleatórios).
 
 Concorrência: um semáforo limita gerações simultâneas (LITTLE_HAWK_MAX_CONCURRENCY,
 padrão 2). Desconexão do cliente cancela a inferência de forma cooperativa.
@@ -16,8 +16,8 @@ Cada requisição usa RNG própria — resultados não interferem entre si.
 import asyncio
 import json
 import os
+import queue as _queue_mod
 import threading
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import numpy as np
@@ -25,29 +25,17 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from little_hawk import (
-    CORPUS,
-    BPETokenizer,
-    LittleHawkInference,
-    MultiLayerEngine,
-    StreamDecoder,
-)
+from engine.engine import MultiLayerEngine
+from runtime.inference import LittleHawkInference, SamplingConfig
+from runtime.tokenizer import BPETokenizer, CORPUS
 
 MAX_CONCURRENCY = int(os.getenv("LITTLE_HAWK_MAX_CONCURRENCY", "2"))
 DEFAULT_WEIGHTS = os.getenv("LITTLE_HAWK_WEIGHTS", "little_hawk_weights.npz")
 
 # Modelo carregado uma vez por processo
-_tokenizer = None
-_engine = None
 _hawk = None
+_tok = None
 _gen_semaphore: asyncio.Semaphore | None = None
-
-
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    load_model(DEFAULT_WEIGHTS)
-    _ensure_semaphore()
-    yield
 
 
 def _ensure_semaphore() -> asyncio.Semaphore:
@@ -57,12 +45,23 @@ def _ensure_semaphore() -> asyncio.Semaphore:
     return _gen_semaphore
 
 
-app = FastAPI(title="Little Hawk API", version="0.2.0", lifespan=lifespan)
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    load_model(DEFAULT_WEIGHTS)
+    _ensure_semaphore()
+    yield
+
+
+app = FastAPI(title="Little Hawk API", version="0.3.0", lifespan=lifespan)
+
+
+class ClientDisconnected(Exception):
+    pass
 
 
 def load_model(weights_path: str | None = None):
     """Carrega tokenizer/engine. Fallback para modo demo se pesos ausentes."""
-    global _tokenizer, _engine, _hawk
+    global _hawk, _tok
     if _hawk is not None:
         return
     tok = BPETokenizer()
@@ -73,18 +72,21 @@ def load_model(weights_path: str | None = None):
         tok.load_donor_vocab(meta)
         with open(meta, encoding="utf-8") as f:
             m = json.load(f)
-        _dm = int(m.get("d_model", 576))
-        _nh = int(m.get("n_heads", 9))
-        _nl = int(m.get("n_layers", 30))
-        _vs = int(m.get("vocab_size", len(tok.vocab)))
-        eng = MultiLayerEngine(d_model=_dm, n_heads=_nh, n_layers=_nl, sink_size=4, window_size=508, vocab_size=_vs)
+        eng = MultiLayerEngine(
+            d_model=int(m.get("d_model", 576)),
+            n_heads=int(m.get("n_heads", 9)),
+            n_layers=int(m.get("n_layers", 30)),
+            sink_size=4,
+            window_size=508,
+            vocab_size=int(m.get("vocab_size", len(tok.vocab))),
+        )
         eng.load_weights(weights_path)
     else:
         tok.train(CORPUS, vocab_size=512, verbose=False)
         eng = MultiLayerEngine(
             d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=len(tok.vocab)
         )
-    _tokenizer, _engine = tok, eng
+    _tok = tok
     _hawk = LittleHawkInference(tokenizer=tok, engine=eng)
 
 
@@ -95,73 +97,59 @@ def _blocking_stream(
     top_k: int,
     top_p: float,
     rep_penalty: float,
+    out_q: _queue_mod.Queue,
     cancel: threading.Event,
 ):
-    """Gerador síncrono de tokens (CPU-bound). Para cooperativamente via cancel."""
-    hawk = _hawk
-    tok = _tokenizer
-    eng = _engine
-    rng = np.random.default_rng()  # RNG por requisição
-    caches = eng.init_cache()
-    win_ptr = 0
-    sdec = StreamDecoder(tok)
-    ids = tok.encode(prompt, add_bos=True)
-    generated = [t for t in ids if t not in (tok.bos_id, tok.eos_id)]
-    n_ctx = 0
-    for tid in ids:
-        n_ctx += 1
-        logits, caches, win_ptr, _ = eng.step(tid, caches, win_ptr, n_ctx)
-        last_logits = logits[0]
-    for _ in range(max_tokens):
+    """Roda em thread (CPU-bound). Empurra chunks decodificados; aborta via cancel.
+
+    Um `ClientDisconnected` levantado no callback propaga por generate() e encerra
+    a inferência no token seguinte — cancelamento cooperativo sem desperdiçar CPU.
+    """
+    cfg = SamplingConfig(
+        max_tokens=max_tokens, temperature=temperature, top_k=top_k, top_p=top_p, rep_penalty=rep_penalty
+    )
+
+    def on_token(text: str, step: int, stats: dict):
+        if text:
+            out_q.put(text)
         if cancel.is_set():
-            break
-        nid = hawk._sample(
-            last_logits.copy(), temperature, top_k, top_p, rep_penalty=rep_penalty, generated=generated, rng=rng
-        )
-        n_ctx += 1
-        logits, caches, win_ptr, _ = eng.step(nid, caches, win_ptr, n_ctx)
-        last_logits = logits[0]
-        if nid == tok.eos_id:
-            break
-        generated.append(nid)
-        yield sdec.push(nid)
-    tail = sdec.flush()
-    if tail and not cancel.is_set():
-        yield tail
+            raise ClientDisconnected()
+
+    try:
+        _hawk.generate(prompt, sampling_config=cfg, telemetry=None, on_token=on_token)
+        out_q.put(None)  # fim normal
+    except ClientDisconnected:
+        out_q.put(None)
 
 
 _DONE = 'data: {"token": "[DONE]"}\n\n'
 
 
-async def _stream_sse(
-    prompt: str, max_tokens: int, temperature: float, top_k: int, top_p: float, rep_penalty: float
-) -> AsyncGenerator[str, None]:
+async def _stream_sse(prompt: str, max_tokens: int, temperature: float, top_k: int, top_p: float, rep_penalty: float):
     """Produz SSE segurando o semáforo durante todo o stream.
 
-    O produtor roda em thread (CPU-bound); se o cliente desconecta, o generator
-    é fechado e `cancel` interrompe a inferência no próximo token.
+    O produtor roda em thread; se o cliente desconecta, o generator é fechado,
+    `cancel` é ativado e a thread de inferência aborta no próximo token.
     """
     loop = asyncio.get_running_loop()
-    queue: asyncio.Queue[str | None] = asyncio.Queue()
+    out_q: _queue_mod.Queue = _queue_mod.Queue()
     cancel = threading.Event()
 
-    def producer():
-        try:
-            for token in _blocking_stream(prompt, max_tokens, temperature, top_k, top_p, rep_penalty, cancel):
-                payload = json.dumps({"token": token}, ensure_ascii=False)
-                asyncio.run_coroutine_threadsafe(queue.put(f"data: {payload}\n\n"), loop)
-        finally:
-            asyncio.run_coroutine_threadsafe(queue.put(_DONE), loop)
-            asyncio.run_coroutine_threadsafe(queue.put(None), loop)
-
     async with _ensure_semaphore():
-        threading.Thread(target=producer, daemon=True).start()
+        producer = threading.Thread(
+            target=_blocking_stream,
+            args=(prompt, max_tokens, temperature, top_k, top_p, rep_penalty, out_q, cancel),
+            daemon=True,
+        )
+        producer.start()
         try:
             while True:
-                chunk = await queue.get()
+                chunk = await loop.run_in_executor(None, out_q.get)
                 if chunk is None:
                     break
-                yield chunk
+                payload = json.dumps({"token": chunk}, ensure_ascii=False)
+                yield f"data: {payload}\n\n"
+            yield _DONE
         finally:
             cancel.set()
 
@@ -192,9 +180,3 @@ async def generate(req: GenerateRequest):
         _stream_sse(req.prompt, req.max_tokens, req.temperature, req.top_k, req.top_p, req.rep_penalty),
         media_type="text/event-stream",
     )
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=False)
