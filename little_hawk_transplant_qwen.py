@@ -28,8 +28,12 @@ Uso:
   python little_hawk_transplant_qwen.py --output qwen_weights.npz
 ══════════════════════════════════════════════════════════════════════════════
 """
-import sys, os, json, argparse
+import argparse
+import json
+import os
+import sys
 from pathlib import Path
+
 import numpy as np
 
 RESET="\033[0m"; BOLD="\033[1m"; DIM="\033[2m"
@@ -62,6 +66,21 @@ def download_file(filename, cache_dir=None):
     print(ok(f"{filename}  ({mb:.0f} MB)"))
     return path
 
+def download_vocab():
+    """Baixa tokenizer.json e extrai o vocabulário token→id."""
+    from huggingface_hub import hf_hub_download
+    print(inf("Baixando tokenizer.json..."))
+    path = hf_hub_download(repo_id=MODEL_ID, filename="tokenizer.json")
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    vocab = {}
+    if "model" in data and "vocab" in data["model"]:
+        vocab = dict(data["model"]["vocab"])
+    for e in data.get("added_tokens", []):
+        vocab[e["content"]] = e["id"]
+    print(ok(f"Vocabulário: {len(vocab):,} tokens"))
+    return vocab
+
 def find_cached(cache_dir=None):
     """Localiza o safetensors no cache local antes de baixar."""
     from huggingface_hub import try_to_load_from_cache
@@ -90,7 +109,8 @@ def load_safetensors(paths):
     """Lê safetensors como bytes raw, converte bf16→f32 sem depender do numpy dtype.
     O safetensors é: [8 bytes header_len][header JSON][dados raw contíguos]
     """
-    import json, struct
+    import json
+    import struct
     tensors = {}
     for path in paths:
         with open(path, "rb") as f:
@@ -127,7 +147,8 @@ def expand_gqa_bias(b, n_kv, n_heads):
     return b.reshape(-1)
 
 def inspect(st_path):
-    import json, struct
+    import json
+    import struct
     hdr("Inspecionando tensores do Qwen2.5-0.5B")
     with open(st_path, "rb") as f:
         header_len = struct.unpack("<Q", f.read(8))[0]
@@ -136,7 +157,7 @@ def inspect(st_path):
     print(f"  Total: {len(keys)} tensores\n")
     for k in keys[:60]:
         m = header[k]
-        print(f"  {DIM}{k:<55}{RESET}  {WHITE}{str(m['shape']):<20}{RESET}  {m['dtype']}")
+        print(f"  {DIM}{k:<55}{RESET}  {WHITE}{m['shape']!s:<20}{RESET}  {m['dtype']}")
     if len(keys) > 60:
         print(f"  {DIM}... +{len(keys)-60} tensores{RESET}")
 
@@ -223,6 +244,9 @@ def extract(st_paths, n_layers, output, cache_dir=None):
     print(ok(f"{output}  ({mb:.0f} MB)"))
 
     # ── Meta JSON ─────────────────────────────────────────────────────────────
+    hdr(f"Salvando {output}")
+    # Vocabulário embutido no meta — garante encode/decode sem cache HF
+    vocab = download_vocab()
     meta_path = output.replace(".npz", "_meta.json")
     meta = {
         "donor":       MODEL_ID,
@@ -237,6 +261,7 @@ def extract(st_paths, n_layers, output, cache_dir=None):
         "bos_id":      BOS_ID,
         "eos_id":      EOS_ID,
         "has_bias":    HAS_BIAS,
+        "vocab":       vocab,
     }
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)

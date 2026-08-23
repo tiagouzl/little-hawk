@@ -21,8 +21,12 @@ Uso:
   python little_hawk_transplant.py --validate little_hawk_weights.npz
 ══════════════════════════════════════════════════════════════════════════════
 """
-import sys,os,json,argparse
+import argparse
+import json
+import os
+import sys
 from pathlib import Path
+
 import numpy as np
 
 RESET="\033[0m";BOLD="\033[1m";DIM="\033[2m"
@@ -112,7 +116,7 @@ def validate(path):
     for k in keys:
         arr=data[k];total+=arr.nbytes
         tag=ok("") if (k in ["embed","lm_head","norm_w"] or k.startswith("L")) else inf("")
-        print(f"  {tag}{CYAN}{k:<22}{RESET} {WHITE}{str(arr.shape):<22}{RESET} {DIM}{arr.nbytes/1024:.0f} KB{RESET}")
+        print(f"  {tag}{CYAN}{k:<22}{RESET} {WHITE}{arr.shape!s:<22}{RESET} {DIM}{arr.nbytes/1024:.0f} KB{RESET}")
     print(f"\n{inf(f'Total: {total/1e6:.1f} MB')}{inf(f'Camadas: {nl}')}")
     all_ok=True
     for i in range(nl):

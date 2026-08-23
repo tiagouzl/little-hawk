@@ -96,10 +96,17 @@ Lint opcional (requere `ruff`):
 ruff check .
 ```
 
-Formatação opcional (requere `ruff`):
+Testes unitários (requere `pytest`; a suíte roda em modo demo, sem pesos):
 
 ```bash
-ruff format .
+make test
+```
+
+Equivalência numérica vs HF Transformers (opcional; requer `torch` CPU + pesos transplantados):
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu transformers
+python -m pytest tests/test_equivalence.py -v
 ```
 
 ### SmolLM-135M (inglês)
@@ -246,14 +253,20 @@ OS:  Linux Mint 21 XFCE
 
 ```
 little-hawk/
-├── little_hawk_cli.py              # Motor de inferência + CLI
+├── little_hawk/                    # Pacote da biblioteca
+│   ├── tokenizer.py                #   BPE (demo + doador) e StreamDecoder
+│   ├── engine.py                   #   LlamaLayer + MultiLayerEngine (cache O(1))
+│   └── inference.py                #   Loop autoregressivo + amostragem
+├── little_hawk_cli.py              # CLI (entry point, re-exporta o pacote)
 ├── little_hawk_transplant.py       # Extrator SmolLM-135M → .npz
 ├── little_hawk_transplant_qwen.py  # Extrator Qwen2.5-0.5B → .npz
+├── api.py                          # API FastAPI (SSE) com limite de concorrência
+├── tests/                          # Suite pytest (unitários + equivalência numérica)
 ├── requirements.txt
 └── README.md
 ```
 
-Os arquivos `.npz` e `_meta.json` gerados pelos transplants não são versionados (`.gitignore`). Cada usuário extrai localmente a partir dos modelos em cache do HuggingFace.
+Os arquivos `.npz` e `_meta.json` gerados pelos transplants não são versionados (`.gitignore`). Cada usuário extrai localmente a partir dos modelos em cache do HuggingFace. O `_meta.json` embute o vocabulário do doador — encode/decode funciona sem cache HF.
 
 ---
 

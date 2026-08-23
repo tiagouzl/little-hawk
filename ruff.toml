@@ -1,6 +1,19 @@
 line-length = 120
 target-version = "py311"
+# Scripts legados usam estilo compacto intencional — fora do formatador.
+extend-exclude = ["little_hawk_cli.py", "little_hawk_transplant.py", "little_hawk_transplant_qwen.py"]
 
 [lint]
 # Relaxed rules because scripts usam estilo compacto/CLI.
-ignore = ["E701", "E702", "E741", "E401", "F401", "F541", "F841"]
+ignore = [
+    "E701", "E702", "E741", "E401", "F401", "F541", "F841",
+    # Estilo legado dos scripts de transplant (compacto, exceções amplas)
+    "I001",      # import block não ordenado
+    "UP035",     # typing.Dict/List/Tuple (anotações legadas)
+    "BLE001",    # except Exception amplo no download/transplant
+    "S110",      # try/except/pass em fallbacks de download
+    "RUF059",    # variável desempacotada não usada
+]
+
+[lint.extend-per-file-ignores]
+"tests/*" = ["E402"]  # sys.path antes dos imports do projeto
