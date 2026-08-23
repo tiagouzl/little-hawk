@@ -4,3 +4,7 @@ __pycache__/
 .DS_Store
 .git_backup_before_squash/
 *.npz
+
+# Artefatos locais
+/codex
+/Repositório-clonado-github/
