@@ -148,3 +148,22 @@ A base é sólida, executável e didaticamente valiosa — o núcleo (cache O(1)
 | P7 | Refatoração modular: pacote `little_hawk/` (`tokenizer`, `engine`, `inference`); CLI vira entry point fino com re-exports; API e testes importam do pacote | ✅ suíte + equivalência verdes pós-move |
 
 Pendências: sincronizar benchmarks do README com o RoPE corrigido.
+
+---
+
+## 8. Validação de contexto longo (23/08/2026)
+
+Teste de 1.500 tokens com pesos reais SmolLM-135M (`scripts/test_long_context.py`) + sondas contra o HF Transformers:
+
+| Verificação | Resultado |
+|---|---|
+| Buffers do cache idênticos após 994 evicções | ✅ zero realocação (O(1) real) |
+| `win_ptr` wraps módulo 508 | ✅ 5 wraps corretos |
+| PPL streaming vs **contexto completo HF** (texto único, 1663 tokens) | ✅ Δ ≤ +0.08 NLL até 1200 de profundidade |
+| Fase de enchimento (logits vs HF, passos 100/300/500) | ✅ mediana ~1e-4 |
+| Geração livre >500 tokens | ⚠ drift semântico → colapso para tokens raros |
+
+Conclusões:
+- A matemática da fase estacionária está **correta** — perplexidade acompanha o contexto completo dentro de +0.003 a +0.076 NLL, exatamente o comportamento documentado no paper StreamingLLM. A divergência de logits vs janela recalculada é esperada: K/V no streaming é computado uma vez com o contexto da época (definição do método).
+- O colapso semântico em geração livre longa também ocorre no HF full-context (controle), só que em palavras genéricas em vez de bytes. É fraqueza do modelo de 135M + compounding de amostragem, não bug do motor.
+- Mitigação recomendada para gerações longas: `--temperature 0.5` ou menor; futuro: sampler `min_p`.
