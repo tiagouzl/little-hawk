@@ -144,6 +144,8 @@ Em termos de performance, NumPy chama OpenBLAS para GEMV, que é o kernel domina
 
 ## Instalação
 
+Requer **Python 3.10+**.
+
 ```bash
 git clone https://github.com/tiagouzl/little-hawk
 cd little-hawk
@@ -158,6 +160,8 @@ Alternativamente, instale localmente como pacote (modo editável):
 
 ```bash
 pip install -e .
+# com ferramentas de desenvolvimento:
+pip install -e ".[dev]"
 ```
 
 Os arquivos `.npz` e `_meta.json` gerados pelos transplants não são versionados (`.gitignore`). Cada usuário extrai localmente a partir dos modelos em cache do HuggingFace. O `_meta.json` embute o vocabulário do doador — encode/decode funciona sem cache HF.
@@ -180,6 +184,7 @@ python little_hawk_cli.py infer --prompt "hello world"
 
 ```bash
 # Transplante — baixa ~540 MB, extrai 30 camadas (~3 min)
+# (padrão sem --layers: 4 camadas — modo reduzido; use 30 para o modelo completo)
 python little_hawk_transplant.py --layers 30
 
 # Inferência

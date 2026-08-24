@@ -146,7 +146,11 @@ def build_tokenizer_and_engine(weights_path):
             vocab_size=int(meta.get("vocab_size", DEFAULT_MODEL_CONFIG["vocab_size"]))
         )
         print(f"  {GREEN}✓ Carregando pesos...{RESET}")
-        engine.load_weights(weights_path)
+        try:
+            engine.load_weights(weights_path)
+        except ValueError as e:
+            print(f"  {RED}✗ Pesos inválidos ou corrompidos:{RESET}\n{e}")
+            sys.exit(1)
     else:
         print(f"  {YELLOW}Modo demo (pesos aleatórios){RESET}")
         tok.train(CORPUS, vocab_size=DEFAULT_MODEL_CONFIG["vocab_size"], verbose=True)

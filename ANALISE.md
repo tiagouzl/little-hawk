@@ -1,5 +1,9 @@
 # Análise Técnica — Little Hawk 🦅
 
+> ⚠️ **Documento histórico**: as seções 1–6 descrevem o estado do projeto ANTES das correções
+> (snapshot de 22/08/2026). Os problemas nelas listados que já foram resolvidos estão marcados
+> na seção 7 "Correções aplicadas". Consulte o §8 e o §9 para o estado atual validado.
+
 > Auditoria do código verificada contra execução real (modo demo + pesos SmolLM-135M).
 > Data: 22/08/2026 · Commit analisado: `76145ec` (`feat: Little Hawk v2`)
 
@@ -167,3 +171,16 @@ Conclusões:
 - A matemática da fase estacionária está **correta** — perplexidade acompanha o contexto completo dentro de +0.003 a +0.076 NLL, exatamente o comportamento documentado no paper StreamingLLM. A divergência de logits vs janela recalculada é esperada: K/V no streaming é computado uma vez com o contexto da época (definição do método).
 - O colapso semântico em geração livre longa também ocorre no HF full-context (controle), só que em palavras genéricas em vez de bytes. É fraqueza do modelo de 135M + compounding de amostragem, não bug do motor.
 - Mitigação recomendada para gerações longas: `--temperature 0.5` ou menor; futuro: sampler `min_p`.
+
+---
+
+## 9. Empacotamento e controles operacionais (23/08/2026)
+
+| Item | Correção |
+|---|---|
+| `setup.py` defasado (`python_requires>=3.8` incompatível com PEP 604; deps incompletas) | Substituído por `pyproject.toml`: `requires-python>=3.10`, deps sincronizadas, extras `dev`/`equiv`, `pip install -e .` validado |
+| Erro bruto de traceback ao carregar `.npz` inválido no CLI | `cli/main.py` captura `ValueError` do `load_weights` e sai com mensagem clara |
+| API sem limite de prompt/timeout | `prompt` limitado a 8000 chars; timeout global `LITTLE_HAWK_TIMEOUT_SECS` (padrão 300s) emite evento de erro SSE e cancela a inferência |
+
+Observações aceitas como escopo do projeto: estado global do modelo (processo único), ausência
+de auth/rate-limiting (demo/educacional), tokenizer demo simplificado. Documentados no README.

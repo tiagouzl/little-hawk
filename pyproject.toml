@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "little-hawk"
+version = "0.3.0"
+description = "LLM streaming engine em Python/NumPy puro"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "tiagouzl" }]
+keywords = ["llm", "inference", "numpy", "streaming", "transformer"]
+dependencies = [
+    "numpy",
+    "safetensors",
+    "huggingface_hub",
+    "tokenizers",
+    "colorama",
+    "fastapi",
+    "uvicorn[standard]",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+# Para o teste de equivalência numérica (tests/test_equivalence.py):
+equiv = [
+    "torch; platform_system != 'Windows'",
+    "transformers",
+]
+
+[project.urls]
+Repository = "https://github.com/tiagouzl/little-hawk"
+
+[tool.setuptools]
+packages = ["api", "cli", "engine", "runtime", "utils"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -30,6 +30,7 @@ from runtime.inference import LittleHawkInference, SamplingConfig
 from runtime.tokenizer import BPETokenizer, CORPUS
 
 MAX_CONCURRENCY = int(os.getenv("LITTLE_HAWK_MAX_CONCURRENCY", "2"))
+TIMEOUT_SECS = float(os.getenv("LITTLE_HAWK_TIMEOUT_SECS", "300"))
 DEFAULT_WEIGHTS = os.getenv("LITTLE_HAWK_WEIGHTS", "little_hawk_weights.npz")
 
 # Modelo carregado uma vez por processo
@@ -123,6 +124,7 @@ def _blocking_stream(
 
 
 _DONE = 'data: {"token": "[DONE]"}\n\n'
+_TIMEOUT_MSG = 'data: {"error": "timeout de inferência — aumente LITTLE_HAWK_TIMEOUT_SECS ou reduza max_tokens"}\n\n'
 
 
 async def _stream_sse(prompt: str, max_tokens: int, temperature: float, top_k: int, top_p: float, rep_penalty: float):
@@ -130,6 +132,7 @@ async def _stream_sse(prompt: str, max_tokens: int, temperature: float, top_k: i
 
     O produtor roda em thread; se o cliente desconecta, o generator é fechado,
     `cancel` é ativado e a thread de inferência aborta no próximo token.
+    Excede o timeout global (LITTLE_HAWK_TIMEOUT_SECS) → evento de erro + fim.
     """
     loop = asyncio.get_running_loop()
     out_q: _queue_mod.Queue = _queue_mod.Queue()
@@ -142,13 +145,25 @@ async def _stream_sse(prompt: str, max_tokens: int, temperature: float, top_k: i
             daemon=True,
         )
         producer.start()
+        deadline = loop.time() + TIMEOUT_SECS
+        timed_out = False
         try:
             while True:
-                chunk = await loop.run_in_executor(None, out_q.get)
+                remaining = deadline - loop.time()
+                if remaining <= 0:
+                    timed_out = True
+                    break
+                try:
+                    chunk = await asyncio.wait_for(loop.run_in_executor(None, out_q.get), timeout=remaining)
+                except asyncio.TimeoutError:
+                    timed_out = True
+                    break
                 if chunk is None:
                     break
                 payload = json.dumps({"token": chunk}, ensure_ascii=False)
                 yield f"data: {payload}\n\n"
+            if timed_out:
+                yield _TIMEOUT_MSG
             yield _DONE
         finally:
             cancel.set()
@@ -160,11 +175,12 @@ async def health():
         "status": "ok",
         "mode": "weights" if os.path.exists(DEFAULT_WEIGHTS) else "demo",
         "max_concurrency": MAX_CONCURRENCY,
+        "timeout_secs": TIMEOUT_SECS,
     }
 
 
 class GenerateRequest(BaseModel):
-    prompt: str = Field(..., description="Texto de entrada")
+    prompt: str = Field(..., description="Texto de entrada", max_length=8000)
     max_tokens: int = Field(80, ge=1, le=2048)
     temperature: float = Field(0.7, ge=0.0)
     top_k: int = Field(40, ge=1)
