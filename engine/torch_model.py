@@ -51,7 +51,8 @@ class LlamaLayerTorch(nn.Module):
         return x * c + torch.cat([-x2, x1], dim=-1) * s
 
     def forward(self, x, k_cache, v_cache, win_ptr, n_ctx):
-        # x: [B,1,d], k/v_cache: [B,H,512,d_k] — position freeze (fill: n_ctx<=512 cobre 503/600)
+        # x: [B,1,d], k/v_cache: [B,H,512,d_k] — position freeze, cache circular
+        # win_ptr atualizado fora (uma vez por step), aqui apenas usa para slot/ctx
         B = x.shape[0]
         S_fixed, max_cap = 4, 512
         si = torch.arange(S_fixed, device=x.device)
@@ -89,8 +90,7 @@ class LlamaLayerTorch(nn.Module):
         u = x_n2 @ self.up
         h = (g / (1 + torch.exp(-g))) * u
         x = x + h @ self.down
-        new_win_ptr = torch.where(n_ctx > S_fixed, (win_ptr + 1) % 508, win_ptr)
-        return x, k_cache, v_cache, new_win_ptr
+        return x, k_cache, v_cache
 
 
 class LittleHawkTorch(nn.Module):
@@ -137,17 +137,18 @@ class LittleHawkTorch(nn.Module):
                 )
             )
 
-    def forward(self, input_ids, k_caches, v_caches, pos_q, pos_cache):
-        # input_ids: [B,1], k/v_caches: [n_layers, B, H, S, d_k] como lista de tensores? Para ONNX, flatten
-        # Para simplificar export 1 layer, usamos 1 cache
+    def forward(self, input_ids, k_stack, v_stack, win_ptr, n_ctx):
+        # input_ids: [B,1], k/v_stack: [L,B,H,512,d_k], win_ptr/n_ctx escalares
         x = self.embed(input_ids)  # [B,1,d]
         new_k, new_v = [], []
         for i, layer in enumerate(self.layers):
-            x, k_out, v_out = layer(x, k_caches[i], v_caches[i], pos_q, pos_cache)
+            x, k_out, v_out = layer(x, k_stack[i], v_stack[i], win_ptr, n_ctx)
             new_k.append(k_out)
             new_v.append(v_out)
+        # win_ptr só avança uma vez por step (como engine/engine.py:108)
+        new_win_ptr = torch.where(n_ctx > 4, (win_ptr + 1) % 508, win_ptr)
         # final norm + lm_head
         var = x.pow(2).mean(-1, keepdim=True)
         xn = x * torch.rsqrt(var + 1e-6) * self.norm_w
         logits = xn @ self.lm_head.T  # [B,1,V]
-        return logits, new_k, new_v
+        return logits, torch.stack(new_k), torch.stack(new_v), new_win_ptr
