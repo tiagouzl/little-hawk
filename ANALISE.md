@@ -258,3 +258,14 @@ Conclusão idêntica à de `ANALISE.md:11` (int8): GEMVs são kernel dominante e
 - Limitação POC: sem KV cache/RoPE/attention (só FFN), mas prova que ONNX é caminho para 2-4× real em inferência completa. Próximo: `past_key_values` dinâmicos + RoPE.
 
 **Decisão:** manter `fast_step` como opt-in Python (1.13×) e documentar ONNX como trilha de aceleração futura; Cython sem BLAS C-API rejeitado (ganho negativo).
+
+## 15. P3 — Cython BLAS e ONNX full (24/08/2026 — continuação)
+
+**Cython BLAS C-API:**
+- `scipy.linalg.blas.sgemv` bench: NumPy `x@W` 613µs vs scipy `sgemv` 3561µs **(5.8× mais lento)** — mesmo padrão de `numba` (6.1×). OpenBLAS via NumPy já é ótimo para batch-1; C-API não ganha.
+- `cython_fast.pyx` compilado 83ms vs `fast_step` 58ms (0.70×) — overhead de boxing Python. **Mantido `fast_step` Python inlined como melhor custo/benefício (1.13×)**.
+
+**ONNX full:**
+- `scripts/onnx_full.py` esboça export com KV cache + RoPE via `torch` (requer `torch.export` + `onnx>=1.18`). POC FFN já provou teto **6.6×** (30L 294→44ms). Próximo: `past_key_values` dinâmicos.
+
+**Conclusão P3:** NumPy puro atingiu teto; aceleração real (>2×) só via ONNX Runtime com graph fusion — trilha recomendada para `v0.5.0`.
