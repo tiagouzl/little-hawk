@@ -2,6 +2,17 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [0.5.0] - 2026-08-24
+
+### ⚡ P3 — Cython e ONNX (investigação completa)
+- `engine/fast_step.py` inlined Python (1.13×, 66→58 ms/token) — melhor custo/benefício; `engine/cython_fast.pyx` compilado (Cython 3.3, 718 KB) mas 0.70× (mais lento, boxing) — rejeitado sem BLAS C-API.
+- `scipy.linalg.blas.sgemv` 5.8× mais lento que NumPy (613→3561µs) — mesmo padrão `numba` 6.1×; OpenBLAS já ótimo para batch-1.
+- `scripts/onnx_export.py` POC 1L 3.04×, 30L 6.62× (294→44 ms, 318 MB) via `onnxruntime` MKL fusion — teto para `v0.5.0`. `scripts/onnx_full.py` stub com KV cache + RoPE para próximo passo (`torch.export`).
+- `pyproject.toml` extras `[cython]` e `[onnx]`, `engine/cython_fast.*` ignorados em `.gitignore`.
+
+### 🧹 Qualidade
+- `ruff.toml` 7→6 entradas (`utils/` promovido, `engine/runtime` lint-clean `EXE001/SIM118`), `ruff check` ✅ `27 passed`.
+
 ## [0.4.0] - 2026-08-23
 
 ### ⚡ Performance & JIT
