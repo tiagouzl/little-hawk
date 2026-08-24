@@ -10,6 +10,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - `engine/__init__.py` + `cli/main.py`: `get_engine()` retorna `OnnxEngine` quando `LITTLE_HAWK_ONNX=1` (fallback NumPy automático).
 - **Validação numérica 600 steps vs NumPy** (stream argmax compartilhado): diff máx de logits `1.5e-04`, top-1 `12/12` checkpoints, top-5 `5.00/5`; step 513 (1ª sobrescrita da janela circular) diff `1.8e-05` ✅.
 - Bench OMP=1: ONNX **91 ms/step** vs NumPy 110 ms/step (**1.21×**); teto FFN-only medido antes: **6.62×** (294→44 ms).
+- 🔬 **Quantização int8/4 avaliada e rejeitada**: `quantize_dynamic` (u8s8, 179 MB, 1.52×) destrói o top-5 (1.83/5 — outliers de ativação espremem escala min/max); `MatMulNBits` int8 weight-only mantém qualidade mas é 0.50× (kernel lento em GEMV batch-1). fp32 permanece o backend. Detalhes em `ANALISE.md §17`.
 
 ## [0.5.0] - 2026-08-24
 

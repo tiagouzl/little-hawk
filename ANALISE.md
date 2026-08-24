@@ -287,3 +287,27 @@ Conclusão idêntica à de `ANALISE.md:11` (int8): GEMVs são kernel dominante e
 **Bench (OMP=1):** ONNX 91 ms/step vs NumPy 110 ms/step (**1.21×**). Ganho modesto porque o grafo inclui embed/lm_head GEMV [49152×576] que domina fora do FFN; o teto de fusão continua sendo os 6.62× do bloco FFN puro.
 
 **Próximos passos possíveis:** quantização int8 do grafo (onnxruntime dynamic quantization), batch>1, ou GraMA-style kernels custom.
+
+## 17. Quantização int8/4 do grafo ONNX — avaliada e REJEITADA (24/08/2026)
+
+**Protocolo:** loop 600 tokens vs NumPy (stream argmax compartilhado), OMP=1, checkpoints {1..600}.
+
+| Variante | Tamanho | ms/step | Speedup | top-1 | top-5 médio |
+|---|---|---|---|---|---|
+| fp32 (v0.6) | 706 MB | 91 | 1.21× | 12/12 | 5.00/5 |
+| `quantize_dynamic` u8s8 full (per-channel) | 179 MB | 72 | 1.52× | 11/12 | 1.83/5 ❌ |
+| idem, exceto lm_head | 264 MB | 76 | 1.43× | 11/12 | 1.83/5 ❌ |
+| idem, só FFN | 468 MB | 83 | 1.32× | 11/12 | 3.08/5 ❌ |
+| `MatMulNBits` int8 weight-only block128 | 362 MB | 210 | **0.50×** ❌ | 12/12 | 4.58/5 |
+| `MatMulNBits` int4 weight-only block128 | 200 MB | 74 | 1.42× | 11/12 | 2.75/5 ❌ |
+
+**Causa raiz da degradação da quantização dinâmica (provado em micro-grafo):**
+- `DynamicQuantizeLinear` usa escala min/max por tensor em **ativações u8** — um único outlier 200× na ativação explode o erro p99 de `4e-03` para `11.7` (resolução dos valores normais vira range/255).
+- No modelo real: p50 |diff| nos logits ~9 (48080/49152 dims com diff>1) — a distribuição inteira se desloca; top-1 sobrevive porque o topo é destacado, mas top-k/top-p ficam inutilizados.
+- `per_channel=True` no toolchain testado nem chegou a ajudar (erro relativo 22% até em MatMul isolado com X~N(0,1)).
+
+**Por que o weight-only não salva:** qualidade boa (top-5 4.58), mas o kernel `MatMulNBits` paga dequant/expansão por step e fica **2× mais lento que NumPy OpenBLAS fp32** em GEMV batch-1 [1,576]@[576,N] — o formato brilha em batch/prefill, não em decode single-token.
+
+**Decisão:** manter **fp32 como único backend ONNX** (v0.6). Rejeitado pelo mesmo critério da v0.4.0 (int8 lm_head em NumPy). Para ganho real futuro seria preciso: static calibration com dataset representativo + QDQ + CPU VNNI, ou kernels estilo GGUF/llama.cpp — fora de escopo.
+
+**Lição metodológica:** diff absoluto de logits engana (topo destacado resiste); a métrica correta para aceitar/rejeitar quantização em pipeline de geração é top-k match contra o referencial numérico ao longo de um stream longo.
