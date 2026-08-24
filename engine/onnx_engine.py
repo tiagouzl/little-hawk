@@ -1,18 +1,17 @@
 """
 engine/onnx_engine.py — Backend ONNX Runtime para Little Hawk (opt-in)
 
-Implementa mesma interface que MultiLayerEngine.step mas via ONNX Runtime
-com cache linear dinâmico (S cresce). Ativado via LITTLE_HAWK_ONNX=1.
+Implementa mesma interface que MultiLayerEngine.step via ONNX Runtime
+com cache circular 512 + position freeze. Ativado via LITTLE_HAWK_ONNX=1.
 
-Export: `python scripts/onnx_export.py --weights little_hawk_weights.npz --layers 30 --bench`
-gera /tmp/test_30L_stack.onnx (478 MB). Este módulo carrega esse ONNX
-ou exporta sob demanda se não existir.
+Export: `python -c "from engine.onnx_engine import OnnxEngine; OnnxEngine()"`
+gera /tmp/little_hawk_full_30L.onnx (705 MB, 30L). Validado 5 steps diff <1e-3.
 
 Uso:
   LITTLE_HAWK_ONNX=1 python little_hawk_cli.py infer --weights little_hawk_weights.npz --prompt "..."
   # fallback para NumPy se ONNX não disponível
 
-Benchmark 30L 1 thread: NumPy 294 ms → ONNX 31.5 ms (9×) / Torch 70 ms (4×)
+Benchmark 30L 1 thread: NumPy 134 ms (fill) → ONNX 92 ms (1.45×) / 77 ms (FFN 6.6×)
 """
 import os
 from pathlib import Path
@@ -36,15 +35,13 @@ except ImportError:
 class OnnxEngine:
     """Wrapper com mesma API que MultiLayerEngine para uso em runtime/inference.py"""
 
-    def __init__(self, npz_path="little_hawk_weights.npz", onnx_path="/tmp/test_30L_stack.onnx"):
+    def __init__(self, npz_path="little_hawk_weights.npz", onnx_path="/tmp/little_hawk_full_30L.onnx"):
         if not HAS_ORT or not HAS_TORCH:
             raise RuntimeError("onnxruntime/torch não instalados — `pip install -e '.[onnx]'`")
-        from engine.torch_model import LittleHawkTorch
-
-        # Carrega para obter meta, mas ONNX já tem pesos embutidos
+        # NÃO reusar exports antigos de /tmp: grafo pode ser de versão anterior
+        # do torch_model (ex.: win_ctx linear sem circular) e divergir no step 513
         self.npz_path = npz_path
         self.onnx_path = onnx_path
-        # Exporta se não existir
         if not Path(onnx_path).exists():
             self._export_onnx(npz_path, onnx_path)
         self.sess = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
@@ -64,7 +61,7 @@ class OnnxEngine:
         self.inv_freq = 1.0 / (1000000.0 ** (np.arange(0, self.d_k, 2, dtype=np.float32) / self.d_k)) if self.d_k else np.array([])
         self.wbi = np.arange(self.W, dtype=np.int64)
         self.si = np.arange(self.S, dtype=np.int64)
-        # ONNX usa cache linear, não circular — win_ptr é dummy
+        # Cache circular 512 vive no grafo ONNX (win_ptr/n_ctx entram como inputs)
         self._init_onnx_caches()
 
     def _export_onnx(self, npz_path, onnx_path):

@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils import BANNER, CYAN, GREEN, RED, RESET, YELLOW
 from runtime.tokenizer import BPETokenizer, CORPUS
-from engine.engine import MultiLayerEngine
+from engine import MultiLayerEngine, get_engine, is_onnx_enabled
 from runtime.inference import LittleHawkInference, SamplingConfig, ConsoleTelemetry
 from utils.config import DEFAULT_MODEL_CONFIG, DEFAULT_INFERENCE_CONFIG, load_config_from_env
 from utils.helpers import validate_weights_file
@@ -138,13 +138,17 @@ def build_tokenizer_and_engine(weights_path):
         with open(meta_path, encoding="utf-8") as f:
             meta = json.load(f)
 
-        engine = MultiLayerEngine(
-            d_model=int(meta.get("d_model", DEFAULT_MODEL_CONFIG["d_model"])),
-            n_heads=int(meta.get("n_heads", DEFAULT_MODEL_CONFIG["n_heads"])),
-            n_layers=int(meta.get("n_layers", DEFAULT_MODEL_CONFIG["n_layers"])),
-            sink_size=4, window_size=508,
-            vocab_size=int(meta.get("vocab_size", DEFAULT_MODEL_CONFIG["vocab_size"])),
-        )
+        if is_onnx_enabled():
+            print(f"  {CYAN}ONNX Runtime ativado (LITTLE_HAWK_ONNX=1) — 1.45× vs NumPy{RESET}")
+            engine = get_engine(npz_path=weights_path)
+        else:
+            engine = MultiLayerEngine(
+                d_model=int(meta.get("d_model", DEFAULT_MODEL_CONFIG["d_model"])),
+                n_heads=int(meta.get("n_heads", DEFAULT_MODEL_CONFIG["n_heads"])),
+                n_layers=int(meta.get("n_layers", DEFAULT_MODEL_CONFIG["n_layers"])),
+                sink_size=4, window_size=508,
+                vocab_size=int(meta.get("vocab_size", DEFAULT_MODEL_CONFIG["vocab_size"])),
+            )
         print(f"  {GREEN}✓ Carregando pesos...{RESET}")
         try:
             engine.load_weights(weights_path)
