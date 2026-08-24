@@ -135,10 +135,12 @@ Em termos de performance, NumPy chama OpenBLAS para GEMV, que é o kernel domina
 
 ## Modelos suportados
 
-| Modelo | Params | RAM (.npz) | Latência (CPU) | Idiomas |
+| Modelo | Params | RAM (.npz) | Latência (CPU, 1 thread, p50) | Idiomas |
 |---|---|---|---|---|
-| SmolLM-135M | 135M | ~330 MB | ~100ms/token | EN |
-| Qwen2.5-0.5B | 500M | ~900 MB | ~400ms/token | EN, PT, ZH, multilíngue |
+| SmolLM-135M | 135M | ~330 MB | ~134 ms/token (enchimento) / ~249 ms/token (estacionária, >512) | EN |
+| Qwen2.5-0.5B | 500M | ~900 MB | ~400ms/token (estimado, 1 thread) | EN, PT, ZH, multilíngue |
+
+> Medições de 24/08/2026 pós-correção RoPE (`afa1765`) em Aspire A515-54 (i5-10210U, 1 thread BLAS, `min_p=0.05`, 600 tokens, `OMP=1`): pico RSS ~1.28 GB, cache O(1) 70.8 MB, `profile_layer.py` breakdown ~13 ms/camada → ~398 ms/token (30L). Valores oscilam ±60% por thermal throttling — comparar sempre A/B intercalado.
 
 ---
 
@@ -296,17 +298,19 @@ A API também aceita `"min_p"` no corpo da requisição. A desconexão do client
 
 ## Benchmarks
 
-Benchmarks automatizados de memória, latência e qualidade:
+Benchmarks automatizados de memória, latência e qualidade (re-sincronizados pós-RoPE `rotate_half`, `afa1765`):
 
 ```bash
-# com pesos reais (SmolLM-135M):
-python scripts/benchmark.py --gen-tokens 600 --json bench.json
+# com pesos reais (SmolLM-135M, 1 thread — recomendado para baseline estável):
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+  python scripts/benchmark.py --gen-tokens 600 --json bench.json
+# → pico RSS ~1.28 GB, cache 70.8 MB constante, p50 enchimento ~134 ms / estacionária ~249 ms
 
 # comparação de perplexidade contra o contexto completo (requere torch CPU):
 python scripts/benchmark.py --compare-hf
 ```
 
-Métricas reportadas: pico RSS, pegada do cache O(1) (~71 MB para 30 camadas), ms/token por fase (enchimento vs estacionária) com p50/p95, NLL teacher-forced em texto único e detectores de drift na geração livre.
+Métricas reportadas: pico RSS, pegada do cache O(1) (70.8 MB para 30 camadas, buffers reutilizados), ms/token por fase (enchimento vs estacionária) com p50/p95, NLL teacher-forced em texto único (mean ~4.42, ppl ~83) e detectores de drift na geração livre (`min_p=0.05` evita colapso).
 
 Benchmark padronizado de latência, com warm-up e uma thread:
 

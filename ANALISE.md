@@ -151,7 +151,7 @@ A base é sólida, executável e didaticamente valiosa — o núcleo (cache O(1)
 | P6 | CI: `fmt-check` real + step `make test`; suíte pytest com 22 testes | ✅ verde local |
 | P7 | Refatoração modular: pacote `little_hawk/` (`tokenizer`, `engine`, `inference`); CLI vira entry point fino com re-exports; API e testes importam do pacote | ✅ suíte + equivalência verdes pós-move |
 
-Pendências: sincronizar benchmarks do README com o RoPE corrigido.
+Pendências: ~~sincronizar benchmarks do README com o RoPE corrigido~~ → ✅ em 24/08/2026 (`afa1765`, `bench_600.json`): p50 enchimento 134 ms / estacionária 249 ms (1 thread, SmolLM-135M, 600 tokens), cache 70.8 MB, perfil 13 ms/camada.
 
 ---
 
