@@ -16,6 +16,6 @@ test:
 	$(PY) -m pytest tests/ -v
 
 run-api:
-	uvicorn api:app --host 0.0.0.0 --port 8000
+	uvicorn api.server:app --host 0.0.0.0 --port 8000
 
 .PHONY: check lint fmt fmt-check test run-api

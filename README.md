@@ -314,18 +314,22 @@ Benchmark padronizado de latência, com warm-up e uma thread:
 python scripts/benchmark_latency.py --weights little_hawk_weights.npz --tokens 100
 ```
 
-Para investigar o custo de cada componente do forward pass:
+Para investigar o custo de cada componente do forward pass (breakdown por estágio, 1 thread BLAS):
 
 ```bash
-python scripts/profile_step.py --weights little_hawk_weights.npz
+python scripts/profile_layer.py
 ```
 
-O suporte JIT é opcional. Sem Numba, o projeto continua usando NumPy puro:
+O suporte JIT é opcional e **opt-in** (sem Numba o projeto usa NumPy vetorizado com mesma semântica). Requer `numba` + variável de ambiente:
 
 ```bash
-pip install -e '.[jit]'
+pip install -e '.[jit]'          # instala numba>=0.58.0
 LITTLE_HAWK_JIT=1 python little_hawk_cli.py infer --prompt "hello world"
+LITTLE_HAWK_JIT=1 python scripts/profile_layer.py   # compara vs NumPy puro
+LITTLE_HAWK_JIT=1 python scripts/benchmark_latency.py --weights little_hawk_weights.npz --tokens 100
 ```
+
+> Nota de performance (medido em `engine/jit_kernels.py:1`): em decode batch-1 o ganho de JIT em RMSNorm/SwiGLU é nulo (~2% do passo). O gargalo real são os GEMVs das 30 camadas (~96% do tempo, ~250 ms/token). JIT mantido apenas como extra opcional.
 
 Teste estendido de contexto longo (>512 tokens, exercita position freeze):
 

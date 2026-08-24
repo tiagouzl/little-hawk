@@ -108,7 +108,7 @@ def _blocking_stream(
     a inferência no token seguinte — cancelamento cooperativo sem desperdiçar CPU.
     """
     cfg = SamplingConfig(
-        max_tokens=max_tokens, temperature=temperature, top_k=top_k, top_p=top_p, rep_penalty=rep_penalty
+        max_tokens=max_tokens, temperature=temperature, top_k=top_k, top_p=top_p, rep_penalty=rep_penalty, min_p=min_p
     )
 
     def on_token(text: str, step: int, stats: dict):

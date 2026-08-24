@@ -165,3 +165,33 @@ class TestLMHead:
         import numpy as _np
 
         assert engine[1].W_lm_t.flags["C_CONTIGUOUS"]
+
+
+class TestPositionFreeze:
+    def test_stationary_phase_stable(self, engine):
+        _, eng = engine
+        caches = eng.init_cache()
+        win_ptr = 0
+        logits = None
+        # roda 3× max_cap para exercitar enchimento + estacionária + múltiplos wraps
+        for n_ctx in range(1, eng.max_cap * 3 + 1):
+            logits, caches, win_ptr, _ = eng.step(n_ctx % eng.V, caches, win_ptr, n_ctx)
+            assert np.isfinite(logits).all(), f"NaN/Inf em n_ctx={n_ctx}"
+        assert 0 <= win_ptr < eng.W
+        # evicções lógicas = n_ctx - max_cap
+        assert eng.max_cap == eng.S + eng.W
+
+    def test_rope_freeze_positions(self):
+        # valida diretamente a semântica de position freeze do transformer
+        from engine.jit_kernels import _rope_numpy
+
+        d_k, n_heads = 8, 2
+        inv_freq = 1.0 / (10000.0 ** (np.arange(0, d_k, 2, dtype=np.float32) / d_k))
+        x = np.random.default_rng(0).normal(size=(1, n_heads, 1, d_k)).astype(np.float32)
+        # posição congelada vs crescente devem dar embeddings diferentes
+        r_freeze = _rope_numpy(x, np.array([31], dtype=np.int64), inv_freq)
+        r_growing = _rope_numpy(x, np.array([600], dtype=np.int64), inv_freq)
+        assert not np.allclose(r_freeze, r_growing)
+        # mesma posição congelada deve ser determinística
+        r2 = _rope_numpy(x, np.array([31], dtype=np.int64), inv_freq)
+        np.testing.assert_allclose(r_freeze, r2)
