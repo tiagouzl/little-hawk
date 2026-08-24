@@ -1,11 +1,11 @@
 line-length = 120
 target-version = "py310"
 # Módulos de estilo compacto intencional — fora do formatador.
+# utils/ foi promovido a lintado/formatado em afa1765+ (P2)
 extend-exclude = [
     "engine/",
     "runtime/",
     "cli/main.py",
-    "utils/",
     "transplants/",
     "examples/",
     "scripts/",

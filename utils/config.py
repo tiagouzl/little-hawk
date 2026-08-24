@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 """
 utils/config.py — Configurações padrão do Little Hawk
 """
+
 import os
-from typing import Dict, Any
 
 # Configurações de modelo
 DEFAULT_MODEL_CONFIG = {
@@ -14,7 +13,7 @@ DEFAULT_MODEL_CONFIG = {
     "window_size": 28,
     "vocab_size": 512,
     "rope_base": 10000.0,
-    "seed": 42
+    "seed": 42,
 }
 
 # Configurações de inferência
@@ -24,15 +23,11 @@ DEFAULT_INFERENCE_CONFIG = {
     "top_k": 40,
     "top_p": 0.92,
     "rep_penalty": 1.15,
-    "min_p": 0.0
+    "min_p": 0.0,
 }
 
 # Configurações de API
-DEFAULT_API_CONFIG = {
-    "host": "0.0.0.0",
-    "port": 8000,
-    "weights_env": "LITTLE_HAWK_WEIGHTS"
-}
+DEFAULT_API_CONFIG = {"host": "0.0.0.0", "port": 8000, "weights_env": "LITTLE_HAWK_WEIGHTS"}
 
 # Modelos suportados
 SUPPORTED_MODELS = {
@@ -42,7 +37,7 @@ SUPPORTED_MODELS = {
         "n_heads": 9,
         "n_layers": 30,
         "vocab_size": 49152,
-        "rope_base": 10000.0
+        "rope_base": 10000.0,
     },
     "qwen2.5-0.5b": {
         "id": "Qwen/Qwen2.5-0.5B",
@@ -50,15 +45,16 @@ SUPPORTED_MODELS = {
         "n_heads": 14,
         "n_layers": 24,
         "vocab_size": 151936,
-        "rope_base": 1000000.0
-    }
+        "rope_base": 1000000.0,
+    },
 }
 
-def load_config_from_env() -> Dict[str, Any]:
+
+def load_config_from_env() -> dict[str, object]:
     """Carrega configurações do ambiente"""
     config = {
         "weights_path": os.getenv("LITTLE_HAWK_WEIGHTS"),
         "api_host": os.getenv("LITTLE_HAWK_API_HOST", DEFAULT_API_CONFIG["host"]),
-        "api_port": int(os.getenv("LITTLE_HAWK_API_PORT", DEFAULT_API_CONFIG["port"]))
+        "api_port": int(os.getenv("LITTLE_HAWK_API_PORT", DEFAULT_API_CONFIG["port"])),
     }
     return {k: v for k, v in config.items() if v is not None}
