@@ -308,6 +308,25 @@ python scripts/benchmark.py --compare-hf
 
 Métricas reportadas: pico RSS, pegada do cache O(1) (~71 MB para 30 camadas), ms/token por fase (enchimento vs estacionária) com p50/p95, NLL teacher-forced em texto único e detectores de drift na geração livre.
 
+Benchmark padronizado de latência, com warm-up e uma thread:
+
+```bash
+python scripts/benchmark_latency.py --weights little_hawk_weights.npz --tokens 100
+```
+
+Para investigar o custo de cada componente do forward pass:
+
+```bash
+python scripts/profile_step.py --weights little_hawk_weights.npz
+```
+
+O suporte JIT é opcional. Sem Numba, o projeto continua usando NumPy puro:
+
+```bash
+pip install -e '.[jit]'
+LITTLE_HAWK_JIT=1 python little_hawk_cli.py infer --prompt "hello world"
+```
+
 Teste estendido de contexto longo (>512 tokens, exercita position freeze):
 
 ```bash
@@ -413,9 +432,10 @@ little-hawk/
 ├── api/                  # Servidor FastAPI (api/server.py)
 ├── cli/                  # Interface de linha de comando
 ├── engine/               # Motor de inferência
+│   └── jit_kernels.py    # Kernels Numba opcionais com fallback NumPy
 ├── runtime/              # Tokenizer e núcleo de inferência
 ├── utils/                # Utilitários e configs
-├── scripts/              # Scripts utilitários (ex: download de pesos)
+├── scripts/              # Benchmarks, profiling e utilitários de pesos
 ├── examples/             # Exemplos de uso (ex: demo.py)
 ├── docs/                 # Documentação
 ├── data/                 # Dados/corpus/modelos (gitignored)

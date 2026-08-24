@@ -17,6 +17,7 @@ class MultiLayerEngine:
         rng=np.random.default_rng(seed);s=0.02
         self.embed=rng.normal(0,s,(vocab_size,d_model)).astype(np.float32)
         self.W_lm=rng.normal(0,s,(d_model,vocab_size)).astype(np.float32)
+        self.W_lm_t=np.ascontiguousarray(self.W_lm.T)  # [V,d] p/ sgemv rápido no step
         self.norm_w=np.ones(d_model,dtype=np.float32)
         self.layers=[]
         for _ in range(n_layers):
@@ -43,7 +44,9 @@ class MultiLayerEngine:
         self.V=int(data["_meta_vocab_size"]);self.bos_id=int(data["_meta_bos_id"])
         self.eos_id=int(data["_meta_eos_id"]);rope_base=float(data["_meta_rope_base"])
         self.embed=data["embed"].astype(np.float32)
-        self.W_lm=data["lm_head"].astype(np.float32).T
+        lm=data["lm_head"].astype(np.float32)   # [V,d] como salvo pelo transplant
+        self.W_lm=lm.T                          # [d,V] mantido p/ compatibilidade
+        self.W_lm_t=np.ascontiguousarray(lm)    # já contíguo do npz — sgemv rápido
         self.norm_w=data["norm_w"].astype(np.float32)
         # ── Validação de integridade: chaves presentes + shapes coerentes ────
         expected={"embed":(self.V,self.d_model),"lm_head":(self.V,self.d_model),
@@ -100,6 +103,8 @@ class MultiLayerEngine:
             x=x+ao;x=x+layer.ffn(x);new_caches.append((kc,vc))
             if li==0:sm0=sm
         xn=self._rms_norm(x[:,0,:],self.norm_w)
+        # lm_head via [V,d] contígua: sgemv orientado a linhas (~8ms vs ~14ms)
+        logits=(self.W_lm_t @ xn[0].reshape(-1,1)).T
         # win_ptr só avança quando estamos na fase de janela
         new_win_ptr=(win_ptr+1)%self.W if n_ctx>self.S else win_ptr
-        return xn@self.W_lm,new_caches,new_win_ptr,sm0
+        return logits,new_caches,new_win_ptr,sm0

@@ -195,4 +195,26 @@ de auth/rate-limiting (demo/educacional), tokenizer demo simplificado. Documenta
 | `scripts/benchmark.py` | ✅ memória (pico RSS, cache 70.8 MB constante, buffers reutilizados), latência p50/p95 por fase, NLL teacher-forced + baseline opcional vs contexto completo (`--compare-hf`), saída `--json` |
 | Testes | ✅ 23/23 (2 novos para min_p) |
 
-Numba nos hot paths segue como evolução futura — OpenBLAS domina o GEMV e o ganho esperado é no overhead Python (~80ms/token), exigindo optional-dependency com fallback gracioso.
+Numba foi adicionado como extra opcional em `[jit]`, com fallback gracioso para NumPy puro. Os benchmarks mostraram que RMSNorm/SwiGLU representam apenas uma pequena parte do decode batch-1; o GEMV do `lm_head` continua sendo o principal gargalo e é o próximo alvo de otimização.
+
+---
+
+## 11. Investigação lm_head int8 vs fp32 (24/08/2026)
+
+Motivação: profiling anterior indicava ~75% do tempo no lm_head. **Medição controlada refutou**: com pesos reais, as 30 camadas consomem ~251 ms (96%) e o lm_head ~11 ms (4%) por token. O gargalo real é o dispatch Python/BLAS distribuído pelas camadas, não um único GEMV.
+
+Microbenchmark (D=576, V=49152, p50 aquecido):
+
+| Variante | p50 | med_rel erro | top-5 |
+|---|---|---|---|
+| fp32 `x@W` (atual, view não-contígua) | 13.8 ms | 0 | 5/5 |
+| fp32 `[V,D]` contígua, 2 threads BLAS | **8.8 ms** | 2e-7 | 5/5 |
+| int8 por coluna, upcast bloco 8192 | 33.5 ms | 7.4e-3 | 5/5 |
+| int8 bloqueado 2048 | 59.4 ms | 7.4e-3 | 5/5 |
+
+Decisões pelo critério acordado ("só entregar se ganho superar claramente a perda"):
+- ❌ **int8 rejeitado**: 3–4× mais lento que fp32 em NumPy puro (upcast por token elimina o ganho de banda; sem VNNI via NumPy) e ainda perde precisão.
+- ✅ **Orientação `[V,d]` contígua adotada** (`W_lm_t`, A/B intercalado: −1.4 ms/token, ~14% do head, custo numérico 2e-7). Ganho total do step: <1% — honestidade acima de marketing.
+- ⚠️ Medições absolutas neste hardware oscilam ±60% por thermal throttling — comparar sempre A/B intercalado no mesmo processo.
+
+Caminho real para aceleração expressiva (fase futura): fundir/executar as 30 camadas em menos despachos (kernel único por camada ou grafo compilado), atacando os ~250 ms de overhead estrutural.

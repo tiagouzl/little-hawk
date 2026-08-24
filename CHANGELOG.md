@@ -11,6 +11,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Adicionado script padronizado de medição de latência `scripts/benchmark_latency.py` (latência média, p50, p95 e warm-up controlado) e profiler por componente `scripts/profile_step.py`.
 - Mantida contiguidade de memória (`np.ascontiguousarray`) nas matrizes de peso transpostas do `LlamaLayer` para máxima eficiência em operações GEMV do BLAS.
 
+### 🔬 lm_head: int8 avaliado e rejeitado; orientação contígua adotada
+- Microbenchmark controlado: int8 por coluna é 3–4× MAIS LENTO que fp32 em NumPy puro (upcast por token) — rejeitado pelo critério de ganho vs perda numérica.
+- Profiling corrigido: lm_head custa ~4% do passo (11 ms), não 75%; gargalo real é o dispatch das 30 camadas (~96%).
+- Adotado `W_lm_t` `[V,d]` contíguo no hot path (−1.4 ms/token em A/B intercalado, erro 2e-7); +2 testes de regressão.
+
 ### 🐛 Correções de Bugs
 - **P0**: Corrigido bug de incremento duplo de `win_ptr` em `scripts/test_long_context.py`.
 - Deduplicada a função `_rms_norm` entre `engine.py` e `transformer.py`.

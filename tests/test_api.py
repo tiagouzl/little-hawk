@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-os.environ["LITTLE_HAWK_WEIGHTS"] = "/nonexistent/little_hawk_weights.npz"
+DEMO_WEIGHTS = "/nonexistent/little_hawk_weights.npz"
+os.environ["LITTLE_HAWK_WEIGHTS"] = DEMO_WEIGHTS
 
 from fastapi.testclient import TestClient
 
@@ -17,8 +18,15 @@ import api.server as api
 
 @pytest.fixture(scope="module")
 def client():
-    api.load_model("/nonexistent/little_hawk_weights.npz")  # força modo demo
-    return TestClient(api.app)
+    # Fixa também o valor importado pelo módulo: evita que um ambiente de
+    # execução ou outro teste faça a suíte carregar pesos reais no lifespan.
+    api.DEFAULT_WEIGHTS = DEMO_WEIGHTS
+    api._hawk = None
+    api._tok = None
+    api.load_model(DEMO_WEIGHTS)  # força modo demo
+    # O extra de desenvolvimento fixa httpx<0.28 para manter compatibilidade
+    # com o TestClient/Starlette usado pelo projeto.
+    yield TestClient(api.app)
 
 
 def test_health_demo(client):

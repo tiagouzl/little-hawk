@@ -151,3 +151,17 @@ class TestMinP:
         s = Sampler(SamplingConfig(min_p=0.0, top_k=0, top_p=1.0))
         picks = {s.sample(logits.copy()) for _ in range(200)}
         assert len(picks) > 50  # distribuição uniforme intacta
+
+
+class TestLMHead:
+    def test_transposed_orientation_equivalent(self, engine):
+        _, eng = engine
+        x = np.random.default_rng(0).normal(size=(1, eng.d_model)).astype(np.float32)
+        fast = (eng.W_lm_t @ x[0].reshape(-1, 1)).T  # caminho novo do step()
+        ref = x @ eng.W_lm  # fórmula original
+        np.testing.assert_allclose(fast, ref, rtol=1e-5, atol=1e-6)
+
+    def test_wlm_t_contiguous(self, engine):
+        import numpy as _np
+
+        assert engine[1].W_lm_t.flags["C_CONTIGUOUS"]
