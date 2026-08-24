@@ -4,6 +4,7 @@ engine/transformer.py — LlamaLayer para Little Hawk
 """
 import math
 import numpy as np
+from .jit_kernels import _jit_rms_norm, _jit_silu_mul, _rope_numpy
 
 class LlamaLayer:
     def __init__(self,W_q,W_k,W_v,W_o,rms_attn,gate,up,down,rms_ffn,n_heads,d_k,b_q=None,b_k=None,b_v=None):
@@ -18,9 +19,7 @@ class LlamaLayer:
         self.b_q=b_q;self.b_k=b_k;self.b_v=b_v
     @staticmethod
     def _rms_norm(x,w):
-        return (x/np.sqrt(np.mean(x**2,axis=-1,keepdims=True)+1e-6))*w
-    @staticmethod
-    def _silu(x):return x/(1.0+np.exp(-x))
+        return _jit_rms_norm(x, w)
 
     def attn_step(self,x_t,k_cache,v_cache,win_ptr,inv_freq,S,W,max_cap,wbi,si,n_ctx):
         x_n=self._rms_norm(x_t,self.rms_attn);B=1
@@ -60,16 +59,7 @@ class LlamaLayer:
             pos_q    = np.array([max_cap-1], dtype=np.int64)
         pos_ctx = np.concatenate([pos_sink, pos_win])
         kc=k_cache[:,:,ctx,:];vc=v_cache[:,:,ctx,:]
-        def rope(x,pos):
-            # Convenção HF (LLaMA/Qwen/SmolLM): metades + rotate_half.
-            # Pareamento intercalado (estilo GPT-J) diverge dos pesos transplantados.
-            ang=np.outer(pos.astype(np.float32),inv_freq)
-            emb=np.concatenate([ang,ang],axis=-1)[np.newaxis,np.newaxis]
-            s,c=np.sin(emb),np.cos(emb)
-            half=x.shape[-1]//2
-            x1,x2=x[...,:half],x[...,half:]
-            return x*c+np.concatenate([-x2,x1],axis=-1)*s
-        qr=rope(q,pos_q);kr=rope(kc,pos_ctx)
+        qr=_rope_numpy(q,pos_q,inv_freq);kr=_rope_numpy(kc,pos_ctx,inv_freq)
         sc=(qr@kr.transpose(0,1,3,2))/math.sqrt(self.d_k)
         sc=sc-sc.max(axis=-1,keepdims=True);at=np.exp(sc);at/=at.sum(axis=-1,keepdims=True)
         out=(at@vc).transpose(0,2,1,3).reshape(B,1,self.d_model)@self.W_o
@@ -77,4 +67,4 @@ class LlamaLayer:
 
     def ffn(self,x):
         x_n=self._rms_norm(x,self.rms_ffn)
-        return (self._silu(x_n@self.gate)*(x_n@self.up))@self.down
+        return _jit_silu_mul(x_n@self.gate, x_n@self.up)@self.down

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "little-hawk"
-version = "0.3.0"
+version = "0.4.0"
 description = "LLM streaming engine em Python/NumPy puro"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,6 +23,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff"]
+jit = ["numba>=0.58.0"]
 # Para o teste de equivalência numérica (tests/test_equivalence.py):
 equiv = [
     "torch; platform_system != 'Windows'",
@@ -33,7 +34,7 @@ equiv = [
 Repository = "https://github.com/tiagouzl/little-hawk"
 
 [tool.setuptools]
-packages = ["api", "cli", "engine", "runtime", "utils"]
+packages = ["api", "cli", "engine", "runtime", "transplants", "utils"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

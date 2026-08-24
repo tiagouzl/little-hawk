@@ -53,7 +53,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Little Hawk API", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="Little Hawk API", version="0.4.0", lifespan=lifespan)
 
 
 class ClientDisconnected(Exception):
@@ -200,3 +200,13 @@ async def generate(req: GenerateRequest):
         _stream_sse(req.prompt, req.max_tokens, req.temperature, req.top_k, req.top_p, req.rep_penalty, req.min_p),
         media_type="text/event-stream",
     )
+
+
+@app.get("/")
+async def root():
+    demo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "sse_demo.html")
+    if os.path.exists(demo_path):
+        from fastapi.responses import FileResponse
+
+        return FileResponse(demo_path)
+    return {"message": "Little Hawk API v0.4.0"}

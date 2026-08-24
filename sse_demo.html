@@ -2,252 +2,301 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <title>Little Hawk · Live Inference</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Little Hawk 🦅 · Live Stream & Cache Monitor</title>
   <style>
     :root {
-      --bg: radial-gradient(circle at 20% 20%, rgba(99,102,241,0.25), transparent 35%),
-            radial-gradient(circle at 80% 0%, rgba(16,185,129,0.18), transparent 30%),
-            #0b1220;
-      --card: rgba(255,255,255,0.08);
-      --muted: #9ca3af;
-      --accent: #22d3ee;
-      --accent2: #a855f7;
-      --success: #22c55e;
-      --error: #f43f5e;
-      --mono: "SFMono-Regular", Consolas, Menlo, monospace;
+      --bg: #090d16;
+      --card: rgba(255, 255, 255, 0.05);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent2: #818cf8;
+      --sink-color: #10b981;
+      --win-color: #06b6d4;
+      --empty-color: #1e293b;
+      --mono: "JetBrains Mono", "Fira Code", monospace;
     }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0; padding: 0; min-height: 100vh;
-      background: var(--bg);
-      font-family: "Inter", system-ui, -apple-system, sans-serif;
-      color: #e5e7eb;
+      background: radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.12), transparent 40%),
+                  radial-gradient(circle at 90% 90%, rgba(129, 140, 248, 0.12), transparent 40%),
+                  var(--bg);
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #f1f5f9;
+      min-height: 100vh;
+      padding: 24px;
     }
-    .shell {
-      max-width: 1180px; margin: 32px auto; padding: 0 20px;
-      display: grid; gap: 20px; grid-template-columns: 2fr 1.3fr;
+    .header {
+      max-width: 1200px;
+      margin: 0 auto 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.8fr 1.2fr;
+      gap: 24px;
     }
     .card {
       background: var(--card);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 18px;
-      backdrop-filter: blur(10px);
-      padding: 18px 20px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      padding: 20px;
     }
-    h1 { margin: 0 0 8px; font-size: 26px; letter-spacing: -0.02em; }
-    p.muted { margin: 0; color: var(--muted); }
-    label { display: block; margin: 10px 0 6px; font-weight: 600; }
-    textarea, input, select, button {
+    label { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: block; }
+    textarea, input {
       width: 100%;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 12px;
-      padding: 10px 12px;
-      color: #e5e7eb;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
       font-family: inherit;
       font-size: 14px;
     }
-    textarea { min-height: 120px; resize: vertical; font-family: var(--mono); }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .controls { display: flex; gap: 10px; margin-top: 12px; }
-    .controls button {
+    textarea { min-height: 100px; resize: vertical; font-family: var(--mono); }
+    .row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+    .row-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; }
+    .btn-group { display: flex; gap: 12px; margin-top: 16px; }
+    button {
       flex: 1;
-      background: linear-gradient(120deg, var(--accent), var(--accent2));
+      padding: 12px;
+      border-radius: 10px;
       border: none;
       font-weight: 700;
+      font-size: 14px;
       cursor: pointer;
-      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      transition: opacity 0.2s;
     }
-    .controls button:active { transform: translateY(1px); }
-    #output { min-height: 220px; white-space: pre-wrap; font-family: var(--mono); line-height: 1.4; }
-    .bar {
-      height: 10px; background: rgba(255,255,255,0.08);
-      border-radius: 999px; overflow: hidden;
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-gen { background: linear-gradient(135deg, #0284c7, #6366f1); color: #fff; }
+    .btn-stop { background: #ef4444; color: #fff; }
+    
+    #output {
+      margin-top: 16px;
+      min-height: 200px;
+      max-height: 400px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 14px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
     }
-    .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
-    .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-    .pill { padding: 4px 10px; border-radius: 999px; font-size: 12px; background: rgba(255,255,255,0.08); }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-    .pill.ok { background: rgba(34,197,94,0.15); color: #bbf7d0; }
-    .pill.warn { background: rgba(234,179,8,0.15); color: #fef08a; }
-    a { color: var(--accent); }
+
+    /* Cache visualizer */
+    .cache-box {
+      margin-top: 16px;
+      padding: 14px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+    .cache-bar {
+      display: flex;
+      height: 16px;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 8px;
+      background: var(--empty-color);
+    }
+    .sink-fill { background: var(--sink-color); width: 0%; transition: width 0.1s; }
+    .win-fill { background: var(--win-color); width: 0%; transition: width 0.1s; }
+    .legend { display: flex; justify-content: space-between; font-size: 11px; margin-top: 6px; color: var(--muted); }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; background: var(--card); border: 1px solid var(--card-border); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .stat-val { font-size: 24px; font-weight: 800; font-family: var(--mono); margin-top: 4px; }
   </style>
 </head>
 <body>
-  <div class="shell">
-    <div class="card">
-      <h1>Little Hawk — Live Streaming</h1>
-      <p class="muted">Motor NumPy com cache O(1) + RoPE freeze. Gere texto e veja métricas em tempo real.</p>
 
-      <label for="prompt">Prompt</label>
-      <textarea id="prompt">atenção e memória são os fundamentos</textarea>
-
-      <div class="grid-3">
-        <div>
-          <label>Max tokens</label>
-          <input id="max_tokens" type="number" value="64" min="1" max="1024">
-        </div>
-        <div>
-          <label>Temp</label>
-          <input id="temperature" type="number" step="0.05" value="0.7" min="0" max="2">
-        </div>
-        <div>
-          <label>Top-p</label>
-          <input id="top_p" type="number" step="0.01" value="0.92" min="0" max="1">
-        </div>
-      </div>
-      <div class="grid-2" style="margin-top:10px;">
-        <div>
-          <label>Top-k</label>
-          <input id="top_k" type="number" value="40" min="1" max="50000">
-        </div>
-        <div>
-          <label>Rep penalty</label>
-          <input id="rep_penalty" type="number" step="0.05" value="1.15" min="0" max="5">
-        </div>
-      </div>
-
-      <div class="controls">
-        <button id="go">Gerar</button>
-        <button id="stop" style="background:#ef4444;" disabled>Parar</button>
-      </div>
-
-      <div id="output" class="card" style="margin-top:14px; background: rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05);"></div>
-    </div>
-
-    <div class="card" style="display:flex;flex-direction:column;gap:14px;">
-      <div class="row">
-        <div class="pill" id="mode">detectando...</div>
-        <div class="pill" id="status"><span class="status-dot" style="background:#facc15"></span>idle</div>
-      </div>
-      <div>
-        <div class="row"><span class="muted">Tokens gerados</span><span id="tok_count">0</span></div>
-        <div class="bar"><span id="prog" style="width:0%"></span></div>
-      </div>
-      <div class="grid-2">
-        <div>
-          <div class="muted">Throughput</div>
-          <div id="tps" style="font-size:22px; font-weight:700;">– tok/s</div>
-        </div>
-        <div>
-          <div class="muted">Duração</div>
-          <div id="elapsed" style="font-size:22px; font-weight:700;">– s</div>
-        </div>
-      </div>
-      <div>
-        <div class="muted">Último token</div>
-        <div id="last_token" style="font-family:var(--mono);"></div>
-      </div>
-      <div class="muted" style="font-size:13px;">Use `make run-api` ou Docker e acesse este arquivo servindo estático (ex.: `python -m http.server`).</div>
+  <div class="header">
+    <div class="logo">🦅 Little Hawk LLM</div>
+    <div style="display:flex; gap:10px;">
+      <span class="pill" id="mode-pill"><span class="dot" style="background:#facc15"></span>Conectando...</span>
+      <span class="pill" id="status-pill"><span class="dot" style="background:#94a3b8"></span>Idle</span>
     </div>
   </div>
 
-<script>
-const state = {
-  controller: null,
-  startTime: null,
-  tokens: 0,
-};
+  <div class="grid">
+    <!-- Painel de Geração -->
+    <div class="card">
+      <label>Prompt</label>
+      <textarea id="prompt">The history of artificial intelligence began in ancient times with myths</textarea>
 
-async function detectMode() {
-  try {
-    const resp = await fetch('/health');
-    const j = await resp.json();
-    const pill = document.getElementById('mode');
-    pill.textContent = j.mode || 'demo';
-    pill.className = 'pill ' + (j.mode === 'weights' ? 'ok' : 'warn');
-  } catch (e) {
-    const pill = document.getElementById('mode');
-    pill.textContent = 'offline'; pill.className = 'pill warn';
-  }
-}
+      <div class="row-3">
+        <div><label>Max Tokens</label><input type="number" id="max_tokens" value="100" min="1" max="1000" /></div>
+        <div><label>Temperatura</label><input type="number" id="temperature" value="0.7" step="0.05" /></div>
+        <div><label>Top-p</label><input type="number" id="top_p" value="0.92" step="0.01" /></div>
+      </div>
+      <div class="row-3">
+        <div><label>Top-k</label><input type="number" id="top_k" value="40" /></div>
+        <div><label>Rep Penalty</label><input type="number" id="rep_penalty" value="1.15" step="0.05" /></div>
+        <div><label>Min-p</label><input type="number" id="min_p" value="0.0" step="0.01" /></div>
+      </div>
 
-function updateStatus(txt, color) {
-  const el = document.getElementById('status');
-  const dot = el.querySelector('.status-dot');
-  dot.style.background = color; el.innerHTML = `<span class="status-dot" style="background:${color}"></span>${txt}`;
-}
+      <div class="btn-group">
+        <button class="btn-gen" id="btn-go" onclick="startGeneration()">⚡ Gerar Streaming</button>
+        <button class="btn-stop" id="btn-stop" onclick="stopGeneration()" disabled>⏹ Cancelar</button>
+      </div>
 
-function setButtons(running) {
-  document.getElementById('go').disabled = running;
-  document.getElementById('stop').disabled = !running;
-}
+      <div id="output"></div>
+    </div>
 
-async function start() {
-  const prompt = document.getElementById('prompt').value;
-  const max_tokens = +document.getElementById('max_tokens').value || 64;
-  const temperature = +document.getElementById('temperature').value || 0.7;
-  const top_k = +document.getElementById('top_k').value || 40;
-  const top_p = +document.getElementById('top_p').value || 0.92;
-  const rep_penalty = +document.getElementById('rep_penalty').value || 1.15;
+    <!-- Monitor de Métricas e Cache O(1) -->
+    <div class="card">
+      <label>Métricas em Tempo Real</label>
+      <div class="row-2" style="margin-top: 8px;">
+        <div class="cache-box"><div class="muted">Throughput</div><div class="stat-val" id="tps" style="color:#38bdf8;">0.0 <span style="font-size:14px;color:var(--muted)">tok/s</span></div></div>
+        <div class="cache-box"><div class="muted">Latência Média</div><div class="stat-val" id="lat" style="color:#818cf8;">– <span style="font-size:14px;color:var(--muted)">ms</span></div></div>
+      </div>
 
-  const out = document.getElementById('output');
-  out.textContent = '';
-  state.tokens = 0; state.startTime = performance.now();
-  document.getElementById('tok_count').textContent = '0';
-  document.getElementById('tps').textContent = '– tok/s';
-  document.getElementById('elapsed').textContent = '– s';
-  document.getElementById('prog').style.width = '0%';
-  document.getElementById('last_token').textContent = '';
+      <div class="cache-box" style="margin-top:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:13px; font-weight:700;">StreamingKVCache O(1)</span>
+          <span style="font-size:12px; color:var(--muted); font-family:var(--mono);" id="cache-stats">0 / 512 slots</span>
+        </div>
+        <div class="cache-bar">
+          <div class="sink-fill" id="sink-bar"></div>
+          <div class="win-fill" id="win-bar"></div>
+        </div>
+        <div class="legend">
+          <span>🟢 Sinks (0..3)</span>
+          <span>🔵 Janela Deslizante (4..511)</span>
+          <span>⚪ Vazio</span>
+        </div>
+      </div>
 
-  setButtons(true); updateStatus('streaming', '#22d3ee');
+      <div class="row-2" style="margin-top: 14px;">
+        <div class="cache-box"><div class="muted">Tokens Gerados</div><div class="stat-val" id="tok-count">0</div></div>
+        <div class="cache-box"><div class="muted">Tempo Total</div><div class="stat-val" id="elapsed">0.0 <span style="font-size:14px;color:var(--muted)">s</span></div></div>
+      </div>
+    </div>
+  </div>
 
-  state.controller = new AbortController();
-  try {
-    const resp = await fetch('/generate', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({prompt, max_tokens, temperature, top_k, top_p, rep_penalty}),
-      signal: state.controller.signal,
-    });
-    if (!resp.ok || !resp.body) throw new Error('resposta inválida');
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    const read = () => reader.read().then(({done, value}) => {
-      if (done) { finish(); return; }
-      const chunk = decoder.decode(value, {stream:true});
-      chunk.split('\n\n').forEach(block => {
-        if (!block.startsWith('data:')) return;
-        const payloadStr = block.replace(/^data:\s*/, '');
-        try {
-          const payload = JSON.parse(payloadStr);
-          if (payload.token === '[DONE]') return;
-          state.tokens++;
-          out.textContent += payload.token;
-          document.getElementById('last_token').textContent = payload.token;
-          document.getElementById('tok_count').textContent = state.tokens;
-          document.getElementById('prog').style.width = `${Math.min(100, (state.tokens/max_tokens)*100)}%`;
-          const elapsedSec = (performance.now() - state.startTime)/1000;
-          document.getElementById('elapsed').textContent = `${elapsedSec.toFixed(2)} s`;
-          if (elapsedSec>0) document.getElementById('tps').textContent = `${(state.tokens/elapsedSec).toFixed(2)} tok/s`;
-        } catch {}
-      });
-      return read();
-    });
-    read();
-  } catch (e) {
-    updateStatus('erro', '#f43f5e'); setButtons(false);
-  }
-}
+  <script>
+    let abortController = null;
+    let startTime = null;
+    let tokenCount = 0;
 
-function finish() {
-  setButtons(false);
-  updateStatus('idle', '#22c55e');
-  const elapsedSec = (performance.now() - state.startTime)/1000;
-  document.getElementById('elapsed').textContent = `${elapsedSec.toFixed(2)} s`;
-  if (elapsedSec>0 && state.tokens>0) document.getElementById('tps').textContent = `${(state.tokens/elapsedSec).toFixed(2)} tok/s`;
-}
+    async function checkHealth() {
+      try {
+        const res = await fetch('/health');
+        const data = await res.json();
+        const pill = document.getElementById('mode-pill');
+        pill.innerHTML = `<span class="dot" style="background:#10b981"></span>Modo: ${data.mode} (concorrência: ${data.max_concurrency})`;
+      } catch (e) {
+        document.getElementById('mode-pill').innerHTML = `<span class="dot" style="background:#ef4444"></span>Offline`;
+      }
+    }
 
-function stop() {
-  if (state.controller) state.controller.abort();
-  finish();
-}
+    async function startGeneration() {
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) return;
 
-document.getElementById('go').addEventListener('click', start);
-document.getElementById('stop').addEventListener('click', stop);
-detectMode();
-</script>
+      const body = {
+        prompt,
+        max_tokens: parseInt(document.getElementById('max_tokens').value),
+        temperature: parseFloat(document.getElementById('temperature').value),
+        top_p: parseFloat(document.getElementById('top_p').value),
+        top_k: parseInt(document.getElementById('top_k').value),
+        rep_penalty: parseFloat(document.getElementById('rep_penalty').value),
+        min_p: parseFloat(document.getElementById('min_p').value)
+      };
+
+      document.getElementById('output').textContent = '';
+      tokenCount = 0;
+      startTime = performance.now();
+      abortController = new AbortController();
+
+      document.getElementById('btn-go').disabled = true;
+      document.getElementById('btn-stop').disabled = false;
+      document.getElementById('status-pill').innerHTML = `<span class="dot" style="background:#38bdf8"></span>Gerando...`;
+
+      try {
+        const response = await fetch('/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: abortController.signal
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = JSON.parse(line.slice(6));
+              if (data.token === '[DONE]') {
+                break;
+              }
+              tokenCount++;
+              document.getElementById('output').textContent += data.token;
+              document.getElementById('output').scrollTop = document.getElementById('output').scrollHeight;
+
+              const elapsed = (performance.now() - startTime) / 1000;
+              const tps = tokenCount / elapsed;
+              const lat = (elapsed / tokenCount) * 1000;
+
+              document.getElementById('tok-count').textContent = tokenCount;
+              document.getElementById('elapsed').innerHTML = `${elapsed.toFixed(1)} <span style="font-size:14px;color:var(--muted)">s</span>`;
+              document.getElementById('tps').innerHTML = `${tps.toFixed(1)} <span style="font-size:14px;color:var(--muted)">tok/s</span>`;
+              document.getElementById('lat').innerHTML = `${lat.toFixed(0)} <span style="font-size:14px;color:var(--muted)">ms</span>`;
+
+              // Atualiza visual do cache
+              const totalSlots = Math.min(tokenCount + 10, 512);
+              const sinkPct = (Math.min(tokenCount + 10, 4) / 512) * 100;
+              const winPct = (Math.max(0, Math.min(tokenCount + 10 - 4, 508)) / 512) * 100;
+
+              document.getElementById('sink-bar').style.width = `${sinkPct}%`;
+              document.getElementById('win-bar').style.width = `${winPct}%`;
+              document.getElementById('cache-stats').textContent = `${totalSlots} / 512 slots`;
+            }
+          }
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          document.getElementById('output').textContent += `\n[Erro: ${e.message}]`;
+        }
+      } finally {
+        document.getElementById('btn-go').disabled = false;
+        document.getElementById('btn-stop').disabled = true;
+        document.getElementById('status-pill').innerHTML = `<span class="dot" style="background:#10b981"></span>Pronto`;
+      }
+    }
+
+    function stopGeneration() {
+      if (abortController) {
+        abortController.abort();
+      }
+    }
+
+    checkHealth();
+  </script>
 </body>
 </html>
