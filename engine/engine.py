@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 engine/engine.py — MultiLayerEngine para Little Hawk
 """
@@ -56,7 +55,7 @@ class MultiLayerEngine:
             expected.update({f"L{i}_rms_{n}":(self.d_model,) for n in ("attn","ffn")})
             expected.update({f"L{i}_{n}":None for n in ("gate","up","down")})
             for n in ("b_q","b_k","b_v"):
-                if f"L{i}_{n}" in data.keys():expected[f"L{i}_{n}"]=(self.d_model,)
+                if f"L{i}_{n}" in data:expected[f"L{i}_{n}"]=(self.d_model,)
         errs=[]
         for key,shape in expected.items():
             if key not in data:errs.append(f"ausente: {key}");continue

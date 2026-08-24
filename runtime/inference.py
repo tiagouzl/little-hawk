@@ -36,7 +36,7 @@ class Sampler:
         e = np.exp(x - x.max())
         return e / e.sum()
 
-    def sample(self, logits: np.ndarray, generated: Optional[List[int]] = None, rng=None) -> int:
+    def sample(self, logits: np.ndarray, generated: list[int] | None = None, rng=None) -> int:
         cfg = self.config
         rng = rng if rng is not None else np.random
         logits = logits.astype(np.float64)
@@ -77,19 +77,19 @@ class Telemetry:
     """
     Interface para telemetria de geração (pode ser estendida para logs, métricas, etc)
     """
-    def on_token(self, token: str, idx: int, stats: Dict[str, Any]):
+    def on_token(self, token: str, idx: int, stats: dict[str, Any]):
         pass
-    def on_panel(self, lines: List[str]):
+    def on_panel(self, lines: list[str]):
         pass
-    def on_finish(self, output: str, stats: Dict[str, Any]):
+    def on_finish(self, output: str, stats: dict[str, Any]):
         pass
 
 class ConsoleTelemetry(Telemetry):
-    def on_token(self, token: str, idx: int, stats: Dict[str, Any]):
+    def on_token(self, token: str, idx: int, stats: dict[str, Any]):
         print(f"{WHITE}{token}{RESET}", end="", flush=True)
-    def on_panel(self, lines: List[str]):
+    def on_panel(self, lines: list[str]):
         print("\n".join(lines))
-    def on_finish(self, output: str, stats: Dict[str, Any]):
+    def on_finish(self, output: str, stats: dict[str, Any]):
         print(f"\n{DIM}{'═'*72}{RESET}")
         if 'panel' in stats:
             for ln in stats['panel']:
@@ -108,7 +108,7 @@ class LittleHawkInference:
     - Sampling plugável
     - Suporta hooks para integração com API, CLI, etc
     """
-    def __init__(self, tokenizer, engine, sampler: Optional[Sampler] = None):
+    def __init__(self, tokenizer, engine, sampler: Sampler | None = None):
         self.tok = tokenizer
         self.engine = engine
         self.S = engine.S
@@ -141,16 +141,16 @@ class LittleHawkInference:
             f"  [{cb}]",
             f"  {DIM}{fi}/{self.max_cap} slots  ({pct:.0f}% sink){RESET}", f"",
             f"  {DIM}sink L0 (tok[0]){RESET}", f"  [{smb}] {csm}{sm:.1f}%{RESET}", f"",
-            f"  {DIM}último token{RESET}", f"  {YELLOW}{repr(ts):<18}{RESET}",
+            f"  {DIM}último token{RESET}", f"  {YELLOW}{ts!r:<18}{RESET}",
             f"{DIM}{'─'*44}{RESET}"
         ]
 
     def generate(
         self,
         prompt: str,
-        sampling_config: Optional[SamplingConfig] = None,
-        telemetry: Optional[Telemetry] = None,
-        on_token: Optional[Callable[[str, int, Dict[str, Any]], None]] = None,
+        sampling_config: SamplingConfig | None = None,
+        telemetry: Telemetry | None = None,
+        on_token: Callable[[str, int, dict[str, Any]], None] | None = None,
         panel: bool = True,
     ) -> str:
         """
@@ -171,7 +171,7 @@ class LittleHawkInference:
             n_ctx += 1
             logits, caches, win_ptr, sm = self.engine.step(tid, caches, win_ptr, n_ctx)
             last_logits = logits[0]
-        for step in range((sampling_config.max_tokens if sampling_config else 80)):
+        for step in range(sampling_config.max_tokens if sampling_config else 80):
             t0 = time.perf_counter()
             nid = sampler.sample(last_logits.copy(), generated=generated)
             n_ctx += 1

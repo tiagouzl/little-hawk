@@ -1,7 +1,9 @@
 line-length = 120
 target-version = "py310"
-# Módulos de estilo compacto intencional — fora do formatador.
-# utils/ foi promovido a lintado/formatado em afa1765+ (P2)
+# Estilo compacto intencional — fora do formatador.
+# P2: utils/ promovido (867956b) — engine/runtime corrigidos (EXE001/SIM118) e
+# agora lint-clean; mantidos fora do formatador para preservar semi-colons compactos.
+# cli/transplants/examples/scripts já passam no lint, mantidos fora do formatador.
 extend-exclude = [
     "engine/",
     "runtime/",

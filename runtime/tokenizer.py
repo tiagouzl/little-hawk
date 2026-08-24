@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 runtime/tokenizer.py — BPETokenizer para Little Hawk
 """
@@ -31,8 +30,8 @@ bits e tokens são faces da mesma moeda
 class BPETokenizer:
     PAD="<pad>";UNK="<unk>";BOS="<bos>";EOS="<eos>";SPACE="▁"
     def __init__(self):
-        self.vocab:Dict[str,int]={};self.id_to_token:Dict[int,str]={}
-        self.merges:List[Tuple]=[];self._trained=False
+        self.vocab:dict[str,int]={};self.id_to_token:dict[int,str]={}
+        self.merges:list[tuple]=[];self._trained=False
         self._donor_mode=False;self.bos_id=1;self.eos_id=2
     def _pretokenize(self,text):
         return [[self.SPACE]+list(w) for w in re.findall(r"\w+|[^\w\s]",text.lower(),re.UNICODE)]

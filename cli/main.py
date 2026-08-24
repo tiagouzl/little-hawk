@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 cli/main.py — CLI principal com subcomandos
 """
