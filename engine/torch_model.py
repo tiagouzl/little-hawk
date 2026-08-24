@@ -50,12 +50,11 @@ class LlamaLayerTorch(nn.Module):
         x1, x2 = x[..., :half], x[..., half:]
         return x * c + torch.cat([-x2, x1], dim=-1) * s
 
-    def forward(self, x, k_cache, v_cache):
-        # x: [B,1,d], k/v_cache: [B,H,S,d_k] — pos computado internamente para export
+    def forward(self, x, k_cache, v_cache, win_ptr, n_ctx):
+        # x: [B,1,d], k/v_cache: [B,H,512,d_k] — position freeze (fill: n_ctx<=512 cobre 503/600)
         B = x.shape[0]
-        S = k_cache.shape[2]
-        pos_q = torch.tensor([S], device=x.device)
-        pos_cache = torch.arange(S, device=x.device)
+        S_fixed, max_cap = 4, 512
+        si = torch.arange(S_fixed, device=x.device)
         x_n = self.rms_norm(x, self.rms_attn)
         q = (x_n @ self.W_q).view(B, 1, self.n_heads, self.d_k).transpose(1, 2)
         k = (x_n @ self.W_k).view(B, 1, self.n_heads, self.d_k).transpose(1, 2)
@@ -64,21 +63,34 @@ class LlamaLayerTorch(nn.Module):
             q = q + self.b_q.view(1, self.n_heads, 1, self.d_k)
             k = k + self.b_k.view(1, self.n_heads, 1, self.d_k)
             v = v + self.b_v.view(1, self.n_heads, 1, self.d_k)
-        q = self.rope(q, pos_q)
-        k_cache_r = self.rope(k_cache, pos_cache)
-        k = self.rope(k, pos_q)
-        k_cache = torch.cat([k_cache_r, k], dim=2)
-        v_cache = torch.cat([v_cache, v], dim=2)
-        sc = (q @ k_cache.transpose(-2, -1)) / (self.d_k ** 0.5)
+        slot = torch.where(n_ctx <= S_fixed, n_ctx - 1, S_fixed + win_ptr)
+        k_cache = k_cache.clone()
+        v_cache = v_cache.clone()
+        k_cache[:, :, slot:slot+1, :] = k
+        v_cache[:, :, slot:slot+1, :] = v
+        n_sink = torch.clamp(n_ctx, max=S_fixed)
+        n_win = torch.clamp(n_ctx - S_fixed, min=0, max=508)
+        win_ctx = torch.arange(S_fixed, S_fixed + n_win, device=x.device)
+        ctx = torch.cat([si[:n_sink], win_ctx])
+        pos_q = torch.where(n_ctx <= max_cap, n_ctx - 1, torch.tensor(max_cap - 1, device=x.device))
+        pos_sink = torch.arange(n_sink, device=x.device)
+        pos_win = torch.arange(S_fixed, S_fixed + n_win, device=x.device)
+        pos_ctx = torch.cat([pos_sink, pos_win])
+        q = self.rope(q, pos_q.unsqueeze(0))
+        kc = k_cache[:, :, ctx, :]
+        vc = v_cache[:, :, ctx, :]
+        kr = self.rope(kc, pos_ctx)
+        sc = (qr := q) @ kr.transpose(-2, -1) / (self.d_k ** 0.5)
         at = F.softmax(sc, dim=-1)
-        out = (at @ v_cache).transpose(1, 2).reshape(B, 1, -1) @ self.W_o
+        out = (at @ vc).transpose(1, 2).reshape(B, 1, -1) @ self.W_o
         x = x + out
         x_n2 = self.rms_norm(x, self.rms_ffn)
         g = x_n2 @ self.gate
         u = x_n2 @ self.up
         h = (g / (1 + torch.exp(-g))) * u
         x = x + h @ self.down
-        return x, k_cache, v_cache
+        new_win_ptr = torch.where(n_ctx > S_fixed, (win_ptr + 1) % 508, win_ptr)
+        return x, k_cache, v_cache, new_win_ptr
 
 
 class LittleHawkTorch(nn.Module):
