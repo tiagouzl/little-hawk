@@ -2,6 +2,15 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [0.6.0] - 2026-08-24
+
+### 🚀 Backend ONNX Runtime (opt-in) — 1.21× no loop completo
+- `engine/torch_model.py`: espelho PyTorch do motor (`LlamaLayerTorch` + `LittleHawkTorch`) com **cache circular 512 exportável** — `win_ctx` via `torch.where(n_win < W, arange, (wbi+win_ptr+1)%W+S)` + slice dinâmico, e **position freeze** (`pos_q = where(n_ctx ≤ 512, n_ctx-1, 511)`).
+- `engine/onnx_engine.py`: reescrito para o grafo completo (embed → 30 camadas → norm → lm_head embutidos, 705 MB) com entradas `(input_ids, k_stack[30,1,9,512,64], v_stack, win_ptr, n_ctx)`; exporta sob demanda via `torch.onnx.export(..., opset_version=17, dynamo=False)` e **não** reusa exports antigos de `/tmp` (grafo stale divergia a partir da 1ª sobrescrita circular).
+- `engine/__init__.py` + `cli/main.py`: `get_engine()` retorna `OnnxEngine` quando `LITTLE_HAWK_ONNX=1` (fallback NumPy automático).
+- **Validação numérica 600 steps vs NumPy** (stream argmax compartilhado): diff máx de logits `1.5e-04`, top-1 `12/12` checkpoints, top-5 `5.00/5`; step 513 (1ª sobrescrita da janela circular) diff `1.8e-05` ✅.
+- Bench OMP=1: ONNX **91 ms/step** vs NumPy 110 ms/step (**1.21×**); teto FFN-only medido antes: **6.62×** (294→44 ms).
+
 ## [0.5.0] - 2026-08-24
 
 ### ⚡ P3 — Cython e ONNX (investigação completa)

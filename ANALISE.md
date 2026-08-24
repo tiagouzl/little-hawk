@@ -269,3 +269,21 @@ Conclusão idêntica à de `ANALISE.md:11` (int8): GEMVs são kernel dominante e
 - `scripts/onnx_full.py` esboça export com KV cache + RoPE via `torch` (requer `torch.export` + `onnx>=1.18`). POC FFN já provou teto **6.6×** (30L 294→44ms). Próximo: `past_key_values` dinâmicos.
 
 **Conclusão P3:** NumPy puro atingiu teto; aceleração real (>2×) só via ONNX Runtime com graph fusion — trilha recomendada para `v0.5.0`.
+
+## 16. ONNX full implementado e validado — v0.6.0 (24/08/2026)
+
+**Grafo completo exportável (`engine/torch_model.py`):**
+- `LittleHawkTorch` espelha o motor NumPy 1:1 (embed → 30×[RMSNorm→QKV+RoPE→SDPA→Wo→residual→RMSNorm→SwiGLU] → norm → lm_head) com pesos embutidos (705 MB opset 17).
+- Cache circular + position freeze **exportáveis**: slot `where(n_ctx≤4, n_ctx-1, 4+win_ptr)`; janela `win_ctx = where(n_win<508, arange(4,512), (wbi+win_ptr+1)%508+4)[:n_win]` — slice dinâmico por tensor funciona no ONNX (opset 17); `pos_q` congelado em 511.
+- Exportador: **legado obrigatório** (`dynamo=False`) — o novo `torch.export` falha no `arange` dependente de input.
+
+**Validação end-to-end (600 steps, stream argmax compartilhado vs NumPy):**
+- diff máx logits **1.5e-04** · top-1 **12/12** checkpoints · top-5 **5.00/5**
+- Step 513 (1ª sobrescrita da janela circular): diff **1.8e-05** ✅ — prova o caminho estacionário.
+- 🐛 Pegadinha encontrada: reusar export antigo de `/tmp` (grafo com janela linear pré-fix) reproduz divergência exata a partir do step 513 — sempre re-exportar após mudar `torch_model.py`.
+
+**Integração:** `LITTLE_HAWK_ONNX=1` ativa `OnnxEngine` em `get_engine()` (CLI/API), fallback NumPy automático.
+
+**Bench (OMP=1):** ONNX 91 ms/step vs NumPy 110 ms/step (**1.21×**). Ganho modesto porque o grafo inclui embed/lm_head GEMV [49152×576] que domina fora do FFN; o teto de fusão continua sendo os 6.62× do bloco FFN puro.
+
+**Próximos passos possíveis:** quantização int8 do grafo (onnxruntime dynamic quantization), batch>1, ou GraMA-style kernels custom.

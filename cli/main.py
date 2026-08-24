@@ -139,7 +139,7 @@ def build_tokenizer_and_engine(weights_path):
             meta = json.load(f)
 
         if is_onnx_enabled():
-            print(f"  {CYAN}ONNX Runtime ativado (LITTLE_HAWK_ONNX=1) — 1.45× vs NumPy{RESET}")
+            print(f"  {CYAN}ONNX Runtime ativado (LITTLE_HAWK_ONNX=1) — 1.21× vs NumPy, loop 600 validado{RESET}")
             engine = get_engine(npz_path=weights_path)
         else:
             engine = MultiLayerEngine(
