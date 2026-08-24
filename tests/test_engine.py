@@ -136,8 +136,8 @@ class TestMinP:
 
         eng = engine[1]
         logits = np.full(eng.V, -10.0)
-        logits[7] = 2.0   # p_max
-        logits[8] = 1.5   # acima do corte min_p=0.3 (0.3·p_max≈0.11 → e^1.5/e^2≈0.6 passa)
+        logits[7] = 2.0  # p_max
+        logits[8] = 1.5  # acima do corte min_p=0.3 (0.3·p_max≈0.11 → e^1.5/e^2≈0.6 passa)
         logits[9] = -1.0  # abaixo do corte (e^-1/e^2≈0.05 < 0.11)
         s = Sampler(SamplingConfig(min_p=0.3, top_k=0, top_p=1.0))
         picks = {s.sample(logits.copy()) for _ in range(400)}

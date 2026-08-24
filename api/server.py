@@ -128,7 +128,9 @@ _DONE = 'data: {"token": "[DONE]"}\n\n'
 _TIMEOUT_MSG = 'data: {"error": "timeout de inferência — aumente LITTLE_HAWK_TIMEOUT_SECS ou reduza max_tokens"}\n\n'
 
 
-async def _stream_sse(prompt: str, max_tokens: int, temperature: float, top_k: int, top_p: float, rep_penalty: float, min_p: float = 0.0):
+async def _stream_sse(
+    prompt: str, max_tokens: int, temperature: float, top_k: int, top_p: float, rep_penalty: float, min_p: float = 0.0
+):
     """Produz SSE segurando o semáforo durante todo o stream.
 
     O produtor roda em thread; se o cliente desconecta, o generator é fechado,
@@ -195,7 +197,6 @@ async def generate(req: GenerateRequest):
     if not req.prompt:
         raise HTTPException(400, "prompt é obrigatório")
     return StreamingResponse(
-        _stream_sse(req.prompt, req.max_tokens, req.temperature, req.top_k, req.top_p,
-                    req.rep_penalty, req.min_p),
+        _stream_sse(req.prompt, req.max_tokens, req.temperature, req.top_k, req.top_p, req.rep_penalty, req.min_p),
         media_type="text/event-stream",
     )
