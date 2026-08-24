@@ -71,7 +71,13 @@ class LlamaLayerTorch(nn.Module):
         v_cache[:, :, slot:slot+1, :] = v
         n_sink = torch.clamp(n_ctx, max=S_fixed)
         n_win = torch.clamp(n_ctx - S_fixed, min=0, max=508)
-        win_ctx = torch.arange(S_fixed, S_fixed + n_win, device=x.device)
+        # win_ctx circular para ONNX: fill -> arange, estacionária -> (wbi+win_ptr+1)%W+S
+        W_fixed = 508
+        wbi = torch.arange(W_fixed, device=x.device)
+        win_ctx_arange = torch.arange(S_fixed, S_fixed + W_fixed, device=x.device)
+        win_ctx_circ = (wbi + win_ptr + 1) % W_fixed + S_fixed
+        win_ctx_full = torch.where(n_win < W_fixed, win_ctx_arange, win_ctx_circ)
+        win_ctx = win_ctx_full[:n_win]
         ctx = torch.cat([si[:n_sink], win_ctx])
         pos_q = torch.where(n_ctx <= max_cap, n_ctx - 1, torch.tensor(max_cap - 1, device=x.device))
         pos_sink = torch.arange(n_sink, device=x.device)
