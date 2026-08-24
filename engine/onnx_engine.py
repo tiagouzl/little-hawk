@@ -36,7 +36,7 @@ except ImportError:
 class OnnxEngine:
     """Wrapper com mesma API que MultiLayerEngine para uso em runtime/inference.py"""
 
-    def __init__(self, npz_path="little_hawk_weights.npz", onnx_path="/tmp/little_hawk_30L_stack.onnx"):
+    def __init__(self, npz_path="little_hawk_weights.npz", onnx_path="/tmp/test_30L_stack.onnx"):
         if not HAS_ORT or not HAS_TORCH:
             raise RuntimeError("onnxruntime/torch não instalados — `pip install -e '.[onnx]'`")
         from engine.torch_model import LittleHawkTorch

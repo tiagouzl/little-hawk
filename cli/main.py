@@ -10,7 +10,7 @@ from pathlib import Path
 # Adicionar diretório raiz ao path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from utils import BANNER, GREEN, RESET, YELLOW, RED
+from utils import BANNER, CYAN, GREEN, RED, RESET, YELLOW
 from runtime.tokenizer import BPETokenizer, CORPUS
 from engine.engine import MultiLayerEngine
 from runtime.inference import LittleHawkInference, SamplingConfig, ConsoleTelemetry
@@ -143,7 +143,7 @@ def build_tokenizer_and_engine(weights_path):
             n_heads=int(meta.get("n_heads", DEFAULT_MODEL_CONFIG["n_heads"])),
             n_layers=int(meta.get("n_layers", DEFAULT_MODEL_CONFIG["n_layers"])),
             sink_size=4, window_size=508,
-            vocab_size=int(meta.get("vocab_size", DEFAULT_MODEL_CONFIG["vocab_size"]))
+            vocab_size=int(meta.get("vocab_size", DEFAULT_MODEL_CONFIG["vocab_size"])),
         )
         print(f"  {GREEN}✓ Carregando pesos...{RESET}")
         try:
