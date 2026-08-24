@@ -325,3 +325,22 @@ Conclusão idêntica à de `ANALISE.md:11` (int8): GEMVs são kernel dominante e
 **Validação:** prefill == steps sequenciais para T ∈ {1,2,10,100,300,512}: diff logits/cache ~1e-05, win_ptr igual; coberto por `TestPrefill` (2 testes). E2E CLI: 129 tokens de prompt + 12 gerados em **1.6 s total** (~14 s antes).
 
 **Limites:** acima de max_cap o excedente segue sequencial (chunks estacionários exigiriam máscara circular por rank de recência — possível trabalho futuro). OnnxEngine ainda não tem grafo batched; usa fallback automático.
+
+## 19. Trilha performance — ENCERRADA (24/08/2026)
+
+**Veredito final do motor Little Hawk 135M, CPU desktop, batch-1:**
+
+| Marco | Ganho | Status |
+|---|---|---|
+| `fast_step` Python inlined | 1.13× | mantido |
+| Numba JIT RMSNorm/SwiGLU | ~0× (2% do passo) | rejeitado |
+| Cython compilado | 0.70× | rejeitado |
+| BLAS C-API (scipy sgemv) | 0.17× | rejeitado |
+| int8 NumPy (lm_head) | mais lento | rejeitado |
+| **ONNX Runtime fp32 (opt-in)** | **1.21× decode / teto FFN 6.62×** | **mantido** |
+| ONNX int8/int4 quantizado | rápido mas destrói top-k; weight-only lento em GEMV | rejeitado |
+| **Prefill batched** | **TTFT 10–20× menor** | **mantido** |
+
+**Conclusão:** o ganho real não veio de acelerar o decode single-token (NumPy/OpenBLAS já opera no teto prático para GEMV batch-1 em CPU), e sim de (1) um segundo backend com graph fusion para quem puder pagar os 705 MB e as dependências `[onnx]`, e (2) mudar a *forma* do problema — processar o prompt como GEMM batched em vez de GEMV sequencial. Trilha encerrada sem dívida técnica conhecida: tudo opt-in, fallback automático, validação numérica documentada.
+
+Trilhas futuras possíveis (fora do escopo atual): prefill estacionário por chunks (>512 tokens), grafo ONNX batched/prefill, kernels estilo GGUF, ou execução em GPU.
