@@ -15,8 +15,8 @@ Dependências:
   pip install safetensors huggingface_hub numpy
 
 Uso:
-  python little_hawk_transplant.py              # 4 camadas (padrão)
-  python little_hawk_transplant.py --layers 8   # 8 camadas
+  python -m transplants.smollm              # 4 camadas (padrão)
+  python little_hawk_transplant.py --layers 8   # shim de compatibilidade
   python little_hawk_transplant.py --inspect
   python little_hawk_transplant.py --validate little_hawk_weights.npz
 ══════════════════════════════════════════════════════════════════════════════

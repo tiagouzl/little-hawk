@@ -22,8 +22,8 @@ Dependências:
   pip install safetensors huggingface_hub numpy
 
 Uso:
-  python little_hawk_transplant_qwen.py                  # 24 camadas (todas)
-  python little_hawk_transplant_qwen.py --layers 8       # só 8 camadas
+  python -m transplants.qwen                  # 24 camadas (todas)
+  python little_hawk_transplant_qwen.py --layers 8   # shim de compatibilidade
   python little_hawk_transplant_qwen.py --inspect        # inspeciona tensores
   python little_hawk_transplant_qwen.py --output qwen_weights.npz
 ══════════════════════════════════════════════════════════════════════════════
