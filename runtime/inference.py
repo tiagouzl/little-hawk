@@ -6,6 +6,7 @@ import time
 import numpy as np
 from typing import Optional, Callable, List, Any, Dict
 from dataclasses import dataclass
+from runtime.tokenizer import StreamDecoder
 
 try:
     from utils import RESET, BOLD, DIM, CYAN, GREEN, YELLOW, MAGENTA, RED, WHITE
@@ -159,13 +160,11 @@ class LittleHawkInference:
         """
         caches = self.engine.init_cache()
         win_ptr = 0
-        from runtime.tokenizer import StreamDecoder
         sdec = StreamDecoder(self.tok)
         ids = self.tok.encode(prompt, add_bos=True)
         generated = [t for t in ids if t not in (self.tok.bos_id, self.tok.eos_id)]
         ev = 0; lat = 0.0; sm = 0.0; ts = ""
         last_logits = None; n_ctx = 0
-        pl = 0
         sampler = self.sampler if sampling_config is None else Sampler(sampling_config)
         output_tokens = []
         for tid in ids:

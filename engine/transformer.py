@@ -8,10 +8,12 @@ import numpy as np
 class LlamaLayer:
     def __init__(self,W_q,W_k,W_v,W_o,rms_attn,gate,up,down,rms_ffn,n_heads,d_k,b_q=None,b_k=None,b_v=None):
         self.n_heads=n_heads;self.d_k=d_k;self.d_model=W_q.shape[0]
-        # HF Linear: [out,in] → transpomos para x@W
-        self.W_q=W_q.T;self.W_k=W_k.T;self.W_v=W_v.T;self.W_o=W_o.T
+        # HF Linear: [out,in] → transpomos para x@W (contiguous para BLAS)
+        self.W_q=np.ascontiguousarray(W_q.T);self.W_k=np.ascontiguousarray(W_k.T)
+        self.W_v=np.ascontiguousarray(W_v.T);self.W_o=np.ascontiguousarray(W_o.T)
         self.rms_attn=rms_attn
-        self.gate=gate.T;self.up=up.T;self.down=down.T;self.rms_ffn=rms_ffn
+        self.gate=np.ascontiguousarray(gate.T);self.up=np.ascontiguousarray(up.T)
+        self.down=np.ascontiguousarray(down.T);self.rms_ffn=rms_ffn
         # Bias opcional (Qwen2)
         self.b_q=b_q;self.b_k=b_k;self.b_v=b_v
     @staticmethod

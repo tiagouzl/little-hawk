@@ -421,7 +421,7 @@ little-hawk/
 ├── data/                 # Dados/corpus/modelos (gitignored)
 ├── tests/                # Testes unitários + equivalência numérica
 ├── little_hawk_cli.py    # Wrapper CLI (compatibilidade)
-├── setup.py              # Instalação local via pip
+├── pyproject.toml        # Build e empacotamento (PEP 517/621)
 └── README.md
 ```
 

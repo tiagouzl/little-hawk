@@ -1,7 +1,7 @@
 PY ?= python3
 
 check:
-	$(PY) -m py_compile little_hawk_cli.py little_hawk_transplant.py little_hawk_transplant_qwen.py api/server.py cli/main.py
+	$(PY) -m py_compile little_hawk_cli.py transplants/smollm.py transplants/qwen.py api/server.py cli/main.py
 
 lint:
 	@command -v ruff >/dev/null 2>&1 && ruff check . || (echo "ruff não encontrado; instale com 'pip install ruff' para lint" && exit 1)

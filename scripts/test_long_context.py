@@ -83,6 +83,7 @@ def main():
         t0 = time.perf_counter()
         nid = sampler.sample(last_logits.copy(), generated=generated)
         n_ctx += 1
+        prev_wp = win_ptr
         logits, caches, win_ptr, _ = eng.step(nid, caches, win_ptr, n_ctx)
         last_logits = logits[0]
         lat = (time.perf_counter() - t0) * 1000
@@ -91,8 +92,6 @@ def main():
             phase_lat["stationary"].append(lat)
         else:
             phase_lat["fill"].append(lat)
-        prev_wp = win_ptr
-        win_ptr = (win_ptr + 1) % eng.W if n_ctx > eng.S else win_ptr
         if win_ptr < prev_wp:
             wraps += 1
         if nid == tok.eos_id:

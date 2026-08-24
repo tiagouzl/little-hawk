@@ -88,8 +88,7 @@ class MultiLayerEngine:
     def init_cache(self):
         sh=(1,self.n_heads,self.max_cap,self.d_k)
         return [(np.zeros(sh,np.float32),np.zeros(sh,np.float32)) for _ in range(self.n_layers)]
-    @staticmethod
-    def _rms_norm(x,w):return (x/np.sqrt(np.mean(x**2,axis=-1,keepdims=True)+1e-6))*w
+    _rms_norm = staticmethod(LlamaLayer._rms_norm)
     def step(self,token_id,caches,win_ptr,n_ctx):
         x=self.embed[token_id][np.newaxis,np.newaxis,:]
         sm0=0.0;new_caches=[]

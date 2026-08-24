@@ -101,14 +101,12 @@ def handle_transplant(args):
     print(f"  {GREEN}Transplantando modelo: {args.model}{RESET}")
 
     if args.model == 'smollm-135m':
-        from little_hawk_transplant import main as transplant_main
-        # Simular argumentos
-        import sys
-        sys.argv = ['little_hawk_transplant.py', '--layers', str(args.layers)]
+        from transplants.smollm import main as transplant_main
+        sys.argv = ['transplants/smollm.py', '--layers', str(args.layers)]
         transplant_main()
     elif args.model == 'qwen2.5-0.5b':
-        from little_hawk_transplant_qwen import main as transplant_qwen_main
-        sys.argv = ['little_hawk_transplant_qwen.py', '--layers', str(args.layers)]
+        from transplants.qwen import main as transplant_qwen_main
+        sys.argv = ['transplants/qwen.py', '--layers', str(args.layers)]
         transplant_qwen_main()
 
 def handle_api(args):

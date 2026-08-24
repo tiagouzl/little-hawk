@@ -6,11 +6,9 @@ extend-exclude = [
     "runtime/",
     "cli/main.py",
     "utils/",
-    "setup.py",
+    "transplants/",
     "examples/",
     "scripts/",
-    "little_hawk_transplant.py",
-    "little_hawk_transplant_qwen.py",
 ]
 
 [lint]
