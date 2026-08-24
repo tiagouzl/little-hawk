@@ -218,3 +218,27 @@ Decisões pelo critério acordado ("só entregar se ganho superar claramente a p
 - ⚠️ Medições absolutas neste hardware oscilam ±60% por thermal throttling — comparar sempre A/B intercalado no mesmo processo.
 
 Caminho real para aceleração expressiva (fase futura): fundir/executar as 30 camadas em menos despachos (kernel único por camada ou grafo compilado), atacando os ~250 ms de overhead estrutural.
+
+---
+
+## 12. P2 — Qualidade: utils promovido e dead code removido (24/08/2026 — 867956b)
+
+| Item | Antes | Depois |
+|---|---|---|
+| `utils/helpers.py` | 64 linhas, 4 funções mortas (`find_file_in_cache` chamava `HfApi.list_repo_files` com rede, duplicava `transplants/qwen.py:84`; `load/save_json_safe` nunca usadas) | 30 linhas, mantém `ensure_dir`/`format_bytes`/`validate_weights_file` com `tuple[bool,str]` |
+| `utils/__init__.py` | re-exportava `find_file_in_cache` não usado | re-exporta apenas símbolos usados |
+| `ruff.toml` `extend-exclude` | 7 entradas incluindo `utils/` | 6 entradas — `utils/` agora lintado/formatado |
+| `utils/colors.py` `config.py` | shebang `EXE001`, `Dict`/`Optional` legados | `dict`/`X|None`, sem shebang |
+
+Verificação: `ruff check` ✅, `ruff format --check` ✅, `27 passed`.
+
+## 13. P3 — Investigação fusão de kernels por camada (24/08/2026)
+
+Hipótese: njit de `attn_step` inteiro eliminaria dispatch Python (≈15 calls ×30L = 450 calls/token, ~250-400ms).
+
+Microbenchmark (d=576, inter=1536, 1 thread, N=200):
+- BLAS `x@W_gate` [1,576]@[576,1536]: **401 µs**
+- njit loop manual equivalente: **2.448 µs** → **6.1× mais lento**
+
+Conclusão idêntica à de `ANALISE.md:11` (int8): GEMVs são kernel dominante e OpenBLAS é ótimo; jittar GEMVs perde. RMSNorm/SwiGLU já jittados são ~2% do passo (`engine/jit_kernels.py`). Ganho real só viria de eliminar overhead Python sem perder BLAS (inlining manual, Cython, ou grafo compilado) — fora do escopo NumPy puro. Mantido como opt-in apenas para partes não-GEMV.
+
