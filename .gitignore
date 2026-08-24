@@ -8,3 +8,5 @@ __pycache__/
 # Artefatos locais
 /codex
 /Repositório-clonado-github/
+
+*.egg-info/
