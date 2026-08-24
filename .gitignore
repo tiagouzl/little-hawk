@@ -10,3 +10,7 @@ __pycache__/
 /Repositório-clonado-github/
 
 *.egg-info/
+engine/cython_fast.c
+engine/cython_fast*.so
+build/
+/tmp/little_hawk*.onnx

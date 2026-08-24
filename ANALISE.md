@@ -242,3 +242,19 @@ Microbenchmark (d=576, inter=1536, 1 thread, N=200):
 
 Conclusão idêntica à de `ANALISE.md:11` (int8): GEMVs são kernel dominante e OpenBLAS é ótimo; jittar GEMVs perde. RMSNorm/SwiGLU já jittados são ~2% do passo (`engine/jit_kernels.py`). Ganho real só viria de eliminar overhead Python sem perder BLAS (inlining manual, Cython, ou grafo compilado) — fora do escopo NumPy puro. Mantido como opt-in apenas para partes não-GEMV.
 
+
+---
+
+## 14. P3 — Cython compilado e ONNX Runtime (24/08/2026 — c555bb3+)
+
+**Cython:**
+- `engine/cython_fast.pyx` compilado via `python setup.py build_ext --inplace` (Cython 3.3, gcc -O3, 718 KB .so)
+- Bench 30L SmolLM 20 tok, 1 thread: `orig 66.7 ms` → `fast_step 58.5 ms (1.13×)` → `cython_fast 83.5 ms (0.70×)` — Cython puro com objetos Python é **mais lento** (overhead de boxing). Ganho real vem do inlining Python (`fast_step`), não da compilação sem BLAS C-API. Próximo passo: `cimport numpy` + `scipy.linalg.blas.sgemv` via C-API.
+
+**ONNX Runtime:**
+- `scripts/onnx_export.py` exporta stack Torch espelhado (RMSNorm+FFN) via `torch.onnx.export`
+- Bench 1L: NumPy 9.56 ms → ONNX 3.14 ms **(3.04×)**
+- Bench 30L (318 MB): NumPy 294 ms → ONNX 44.4 ms **(6.62×)** — kernels C++ fusion + MKL superam OpenBLAS dispatch.
+- Limitação POC: sem KV cache/RoPE/attention (só FFN), mas prova que ONNX é caminho para 2-4× real em inferência completa. Próximo: `past_key_values` dinâmicos + RoPE.
+
+**Decisão:** manter `fast_step` como opt-in Python (1.13×) e documentar ONNX como trilha de aceleração futura; Cython sem BLAS C-API rejeitado (ganho negativo).

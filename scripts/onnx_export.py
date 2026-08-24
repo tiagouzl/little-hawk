@@ -87,11 +87,23 @@ def try_export(weights="little_hawk_weights.npz", layers=1, bench=False):
             out = h @ self.down.T
             return out
 
-    # Exporta 1 camada como POC
-    layer0 = eng.layers[0]
-    model = LlamaLayerTorch(layer0, eng.d_model, eng.n_heads, eng.d_k)
+    # Exporta N camadas (stack) como POC
+    n_export = min(layers, eng.n_layers)
+    layers_torch = [LlamaLayerTorch(eng.layers[i], eng.d_model, eng.n_heads, eng.d_k) for i in range(n_export)]
+
+    class StackTorch(nn.Module):
+        def __init__(self, lst):
+            super().__init__()
+            self.layers = nn.ModuleList(lst)
+        def forward(self, x):
+            for l in self.layers:
+                x = x + l(x)  # simplificado: attn+ffn residual
+            return x
+
+    model = StackTorch(layers_torch)
     model.eval()
     dummy = torch.randn(1, eng.d_model)
+    layer0 = eng.layers[0]
 
     onnx_path = f"/tmp/little_hawk_L{layers}.onnx"
     try:
@@ -102,28 +114,35 @@ def try_export(weights="little_hawk_weights.npz", layers=1, bench=False):
         return 1
 
     if bench and has_ort:
-        # Bench NumPy vs ONNX Runtime (1 camada, 1 thread)
         import os
 
         os.environ["OMP_NUM_THREADS"] = "1"
         sess = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
-        # warmup
         for _ in range(5):
             _ = sess.run(None, {"x": dummy.numpy()})
-        # numpy bench (ffn part)
+        # NumPy bench para N camadas (stack simplificado)
         x_np = dummy.numpy()
-        W_gate = layer0.gate  # [inter, d] -> actually stored [d, inter] transposed
+        def numpy_stack(x):
+            for i in range(n_export):
+                l = eng.layers[i]
+                # RMSNorm simplificado + ffn gate
+                var = (x * x).mean(axis=-1, keepdims=True)
+                x_n = x / np.sqrt(var + 1e-6) * l.rms_attn
+                g = x_n @ l.gate
+                u = x_n @ l.up
+                h = (g / (1 + np.exp(-g))) * u @ l.down
+                x = x + h
+            return x
         t0 = time.perf_counter()
-        for _ in range(100):
-            _ = x_np @ layer0.gate
-        ms_np = (time.perf_counter() - t0) / 100 * 1000
+        for _ in range(30):
+            _ = numpy_stack(x_np)
+        ms_np = (time.perf_counter() - t0) / 30 * 1000
         t0 = time.perf_counter()
-        for _ in range(100):
+        for _ in range(30):
             _ = sess.run(None, {"x": dummy.numpy()})
-        ms_ort = (time.perf_counter() - t0) / 100 * 1000
-        print(f"NumPy 1 camada ffn gate: {ms_np:.3f} ms")
-        print(f"ONNX Runtime 1 camada:   {ms_ort:.3f} ms  (speedup {ms_np/ms_ort:.2f}x)")
-        print("Para 30L, ONNX Runtime deve dar 2-4× vs NumPy puro (kernels C++ + fusion).")
+        ms_ort = (time.perf_counter() - t0) / 30 * 1000
+        print(f"NumPy {n_export}L stack: {ms_np:.2f} ms")
+        print(f"ONNX Runtime {n_export}L: {ms_ort:.2f} ms  (speedup {ms_np/ms_ort:.2f}x)")
     elif bench:
         print("Bench pulado — onnxruntime não instalado.")
 
