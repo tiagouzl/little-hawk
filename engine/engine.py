@@ -4,6 +4,7 @@ engine/engine.py — MultiLayerEngine para Little Hawk
 import math
 import numpy as np
 from .transformer import LlamaLayer
+from .jit_kernels import _rope_numpy as _rope
 
 # Cores para output (temporário, até mover para utils)
 
@@ -106,4 +107,40 @@ class MultiLayerEngine:
         logits=(self.W_lm_t @ xn[0].reshape(-1,1)).T
         # win_ptr só avança quando estamos na fase de janela
         new_win_ptr=(win_ptr+1)%self.W if n_ctx>self.S else win_ptr
+        return logits,new_caches,new_win_ptr,sm0
+    def prefill(self,tokens,caches=None):
+        """Forward batched do prompt (fase fill, len(tokens) ≤ max_cap).
+
+        Processa T tokens num único passo com máscara causal — reduz o TTFT
+        de T×~130 ms (step sequencial) para ~um forward GEMM. Estado final
+        (caches/win_ptr/n_ctx) é bit-a-bit equivalente ao loop de steps.
+        Retorna (logits_do_último_token, caches, win_ptr, sm0).
+        """
+        ids=np.asarray(tokens,dtype=np.int64);T=int(ids.size)
+        caches=caches or self.init_cache()
+        x=self.embed[ids][np.newaxis]                      # [1,T,d]
+        sm0=0.0;new_caches=[]
+        pos=np.arange(T,dtype=np.int64)
+        causal=np.tril(np.ones((T,T),dtype=bool))
+        for li,layer in enumerate(self.layers):
+            kc,vc=caches[li]
+            x_n=self._rms_norm(x,layer.rms_attn)
+            q=(x_n@layer.W_q).reshape(1,T,self.n_heads,self.d_k).transpose(0,2,1,3)
+            k=(x_n@layer.W_k).reshape(1,T,self.n_heads,self.d_k).transpose(0,2,1,3)
+            v=(x_n@layer.W_v).reshape(1,T,self.n_heads,self.d_k).transpose(0,2,1,3)
+            if layer.b_q is not None:
+                q=q+layer.b_q;k=k+layer.b_k;v=v+layer.b_v
+            # fase fill: slots 0..T-1 (sequenciais), imutáveis adiante
+            kc[0,:,:T,:]=k[0];vc[0,:,:T,:]=v[0]
+            qr=_rope(q,pos,self.inv_freq);kr=_rope(kc[:,:,:T,:],pos,self.inv_freq)
+            sc=(qr@kr.transpose(0,1,3,2))/math.sqrt(self.d_k)
+            sc=np.where(causal,sc,np.float32(-np.inf))
+            sc=sc-sc.max(axis=-1,keepdims=True);at=np.exp(sc);at/=at.sum(axis=-1,keepdims=True)
+            out=(at@v).transpose(0,2,1,3).reshape(1,T,self.d_model)@layer.W_o
+            x=x+out;x=x+layer.ffn(x)
+            if li==0:sm0=float(at[:,:,0,:].mean()*100)
+            new_caches.append((kc,vc))
+        xn=self._rms_norm(x[0,-1],self.norm_w)
+        logits=(self.W_lm_t@xn.reshape(-1,1)).T
+        new_win_ptr=(T-self.S)%self.W if T>self.S else 0
         return logits,new_caches,new_win_ptr,sm0

@@ -167,7 +167,13 @@ class LittleHawkInference:
         last_logits = None; n_ctx = 0
         sampler = self.sampler if sampling_config is None else Sampler(sampling_config)
         output_tokens = []
-        for tid in ids:
+        # Prefill batched do prompt (TTFT ~10-20× menor que step sequencial);
+        # excedente acima de max_cap continua sequencial (fase estacionária)
+        n_fill = min(len(ids), self.max_cap)
+        if n_fill > 0 and hasattr(self.engine, "prefill"):
+            lg_pre, caches, win_ptr, sm = self.engine.prefill(ids[:n_fill], caches)
+            last_logits, n_ctx = lg_pre[0], n_fill
+        for tid in ids[n_fill:]:
             n_ctx += 1
             logits, caches, win_ptr, sm = self.engine.step(tid, caches, win_ptr, n_ctx)
             last_logits = logits[0]

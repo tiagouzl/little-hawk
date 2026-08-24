@@ -311,3 +311,17 @@ Conclusão idêntica à de `ANALISE.md:11` (int8): GEMVs são kernel dominante e
 **Decisão:** manter **fp32 como único backend ONNX** (v0.6). Rejeitado pelo mesmo critério da v0.4.0 (int8 lm_head em NumPy). Para ganho real futuro seria preciso: static calibration com dataset representativo + QDQ + CPU VNNI, ou kernels estilo GGUF/llama.cpp — fora de escopo.
 
 **Lição metodológica:** diff absoluto de logits engana (topo destacado resiste); a métrica correta para aceitar/rejeitar quantização em pipeline de geração é top-k match contra o referencial numérico ao longo de um stream longo.
+
+## 18. Prefill batched — TTFT 10–20× menor (24/08/2026 — v0.7.0)
+
+**Problema:** o TTFT (time-to-first-token) era `T × ~110 ms` porque o prompt entrava token a token pelo mesmo hot path do decode (`step()` otimizado para GEMV batch-1). Prompt de 129 tokens ≈ 14 s antes da primeira palavra gerada.
+
+**Solução (`MultiLayerEngine.prefill`):** um único forward batched do prompt na fase fill (T ≤ max_cap = 512):
+- RMSNorm/SwiGLU/QKV/Wo viram GEMMs `[T,d]@[d,m]` que o OpenBLAS explora muito melhor que GEMVs;
+- atenção com máscara causal `tril(T,T)` + RoPE por posição absoluta (`_rope_numpy` já suportava T>1);
+- escrita no cache direto em `kc[0,:,:T,:]` (slots fill são sequenciais) e `win_ptr=(T-S)%W` idêntico ao loop;
+- lm_head aplicado só ao último token.
+
+**Validação:** prefill == steps sequenciais para T ∈ {1,2,10,100,300,512}: diff logits/cache ~1e-05, win_ptr igual; coberto por `TestPrefill` (2 testes). E2E CLI: 129 tokens de prompt + 12 gerados em **1.6 s total** (~14 s antes).
+
+**Limites:** acima de max_cap o excedente segue sequencial (chunks estacionários exigiriam máscara circular por rank de recência — possível trabalho futuro). OnnxEngine ainda não tem grafo batched; usa fallback automático.

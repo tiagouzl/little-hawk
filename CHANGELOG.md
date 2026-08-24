@@ -2,6 +2,14 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [0.7.0] - 2026-08-24
+
+### ⚡ Prefill batched — TTFT até 20× menor
+- `MultiLayerEngine.prefill(tokens)`: forward único do prompt com máscara causal + RoPE por posição (fase fill, T ≤ max_cap). Equivalência numérica vs steps sequenciais validada (logits/cache diff ~1e-05, win_ptr idêntico em T ∈ {1..512}).
+- `runtime/inference.py`: fill do prompt agora usa prefill; excedente acima de `max_cap` continua sequencial. Engines sem `prefill` (ex.: OnnxEngine single-token) caem no loop original automaticamente.
+- TTFT medido: prompt de 129 tokens passou de ~14 s para **<0,2 s**; GEMMs batched [T,d] aproveitam OpenBLAS muito melhor que GEMV sequenciais.
+- 2 novos testes (`TestPrefill`): prefill == sequencial e prefill+steps == tudo sequencial.
+
 ## [0.6.0] - 2026-08-24
 
 ### 🚀 Backend ONNX Runtime (opt-in) — 1.21× no loop completo

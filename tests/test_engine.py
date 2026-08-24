@@ -195,3 +195,37 @@ class TestPositionFreeze:
         # mesma posição congelada deve ser determinística
         r2 = _rope_numpy(x, np.array([31], dtype=np.int64), inv_freq)
         np.testing.assert_allclose(r_freeze, r2)
+
+
+class TestPrefill:
+    def test_prefill_matches_sequential(self, engine):
+        _, eng = engine
+        rng = np.random.default_rng(3)
+        for T in (1, 5, eng.max_cap):
+            toks = rng.integers(0, eng.V, size=T).tolist()
+            caches_a = eng.init_cache(); wp_a = 0; lg_a = None
+            for n, t in enumerate(toks, start=1):
+                lg_a, caches_a, wp_a, _ = eng.step(t, caches_a, wp_a, n)
+            lg_b, caches_b, wp_b, _ = eng.prefill(toks)
+            np.testing.assert_allclose(lg_b[0], lg_a[0], atol=2e-3)
+            assert wp_a == wp_b
+            d_k = max(np.abs(caches_a[i][0] - caches_b[i][0]).max() for i in range(eng.n_layers))
+            assert d_k < 2e-4
+
+    def test_prefill_then_step_matches_all_sequential(self, engine):
+        _, eng = engine
+        rng = np.random.default_rng(4)
+        toks = rng.integers(0, eng.V, size=10).tolist() + [7, 7, 7]
+        # tudo sequencial
+        caches_a = eng.init_cache(); wp_a = 0; lg_a = None
+        for n, t in enumerate(toks, start=1):
+            lg_a, caches_a, wp_a, _ = eng.step(t, caches_a, wp_a, n)
+        # prefill do prompt + steps na geração
+        caches_b = eng.init_cache()
+        lg_b, caches_b, wp_b, _ = eng.prefill(toks[:10])
+        n = 10
+        for t in toks[10:]:
+            n += 1
+            lg_b, caches_b, wp_b, _ = eng.step(t, caches_b, wp_b, n)
+        np.testing.assert_allclose(lg_b[0], lg_a[0], atol=2e-3)
+        assert wp_a == wp_b
