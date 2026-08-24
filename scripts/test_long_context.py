@@ -36,9 +36,10 @@ def ngram_top(ids, n=8):
 
 
 def ascii_ratio(tok, ids):
-    """Fração de tokens cujo texto é ASCII imprimível (detector de colapso byte-soup)."""
-    ok = sum(1 for t in ids if all(32 <= ord(c) < 127 for c in tok.id_to_token.get(t, "?")))
-    return ok / max(len(ids), 1)
+    """Fração de caracteres ASCII imprimíveis no TEXTO decodificado."""
+    txt = tok.decode(ids)
+    okc = sum(1 for c in txt if 32 <= ord(c) < 127 or c in "\n\r\t")
+    return round(okc / max(len(txt), 1), 3)
 
 
 def main():

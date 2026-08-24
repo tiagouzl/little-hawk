@@ -48,6 +48,8 @@ Exemplos:
     infer_parser.add_argument('--top-k', type=int, default=DEFAULT_INFERENCE_CONFIG['top_k'])
     infer_parser.add_argument('--top-p', type=float, default=DEFAULT_INFERENCE_CONFIG['top_p'])
     infer_parser.add_argument('--rep-penalty', type=float, default=DEFAULT_INFERENCE_CONFIG['rep_penalty'])
+    infer_parser.add_argument('--min-p', type=float, default=DEFAULT_INFERENCE_CONFIG.get('min_p', 0.0),
+                              help='Min-P sampling (0 desativa; 0.05-0.1 estabiliza gerações longas)')
     infer_parser.add_argument('--no-panel', action='store_true', help='Sem painel de telemetria')
 
     # Subcomando transplant
@@ -77,6 +79,7 @@ def handle_infer(args):
         top_k=args.top_k,
         top_p=args.top_p,
         rep_penalty=args.rep_penalty,
+        min_p=getattr(args, 'min_p', 0.0),
     )
     telemetry = ConsoleTelemetry() if not args.no_panel else None
     if args.no_panel:

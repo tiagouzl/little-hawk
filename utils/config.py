@@ -23,7 +23,8 @@ DEFAULT_INFERENCE_CONFIG = {
     "temperature": 0.7,
     "top_k": 40,
     "top_p": 0.92,
-    "rep_penalty": 1.15
+    "rep_penalty": 1.15,
+    "min_p": 0.0
 }
 
 # Configurações de API

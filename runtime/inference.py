@@ -21,6 +21,7 @@ class SamplingConfig:
     top_k: int = 40
     top_p: float = 0.92
     rep_penalty: float = 1.15
+    min_p: float = 0.0  # 0 desativa; mantém apenas tokens com p >= min_p · p_max
 
 class Sampler:
     """
@@ -52,6 +53,15 @@ class Sampler:
             kth = np.partition(logits, -k)[-k]
             logits[logits < kth] = -np.inf
         probs = self.softmax(logits)
+        if cfg.min_p > 0.0:
+            # min_p: descarta tokens cuja probabilidade < min_p · p_max
+            # (mais robusto que top_k em distribuições achatadas — mitiga drift longo)
+            probs = np.where(probs >= cfg.min_p * probs.max(), probs, 0.0)
+            s = probs.sum()
+            if s <= 0.0:  # degenereu (não deve ocorrer: p_max sempre passa)
+                probs = self.softmax(logits)
+            else:
+                probs = probs / s
         if cfg.top_p < 1.0:
             si = np.argsort(probs)[::-1]
             cum = np.cumsum(probs[si])

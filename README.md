@@ -237,6 +237,7 @@ Executa inferência com o modelo:
 --top-k         Top-K sampling (padrão: 40)
 --top-p         Nucleus sampling (padrão: 0.92)
 --rep-penalty   Penalidade de repetição (padrão: 1.15; 1.0 desativa)
+--min-p         Min-P sampling (padrão: 0.0 = desativado; 0.05–0.1 estabiliza gerações longas)
 --no-panel      Sem painel de telemetria em tempo real
 ```
 
@@ -281,7 +282,39 @@ curl -N -X POST http://localhost:8000/generate \
 
 Saída chega token a token (text/event-stream). Se `little_hawk_weights.npz` não existir, o servidor cai em modo demo.
 
-Controle de concorrência via variável de ambiente `LITTLE_HAWK_MAX_CONCURRENCY` (padrão: 2). A desconexão do cliente cancela a inferência de forma cooperativa.
+Controles operacionais (variáveis de ambiente):
+
+| Variável | Padrão | Função |
+|---|---|---|
+| `LITTLE_HAWK_MAX_CONCURRENCY` | `2` | Gerações simultâneas; demais ficam em fila |
+| `LITTLE_HAWK_TIMEOUT_SECS` | `300` | Timeout por stream — emite evento de erro e cancela a inferência |
+| `LITTLE_HAWK_WEIGHTS` | `little_hawk_weights.npz` | Caminho dos pesos |
+
+A API também aceita `"min_p"` no corpo da requisição. A desconexão do cliente cancela a inferência de forma cooperativa.
+
+---
+
+## Benchmarks
+
+Benchmarks automatizados de memória, latência e qualidade:
+
+```bash
+# com pesos reais (SmolLM-135M):
+python scripts/benchmark.py --gen-tokens 600 --json bench.json
+
+# comparação de perplexidade contra o contexto completo (requere torch CPU):
+python scripts/benchmark.py --compare-hf
+```
+
+Métricas reportadas: pico RSS, pegada do cache O(1) (~71 MB para 30 camadas), ms/token por fase (enchimento vs estacionária) com p50/p95, NLL teacher-forced em texto único e detectores de drift na geração livre.
+
+Teste estendido de contexto longo (>512 tokens, exercita position freeze):
+
+```bash
+python scripts/test_long_context.py --tokens 1500
+```
+
+> 💡 Para gerações longas (>512 tokens), use `--min-p 0.05`: mantém a saída estável ao evitar que tokens raros/byte-level sejam amostrados conforme a distribuição se achata.
 
 ---
 

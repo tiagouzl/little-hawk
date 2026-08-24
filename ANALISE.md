@@ -184,3 +184,15 @@ Conclusões:
 
 Observações aceitas como escopo do projeto: estado global do modelo (processo único), ausência
 de auth/rate-limiting (demo/educacional), tokenizer demo simplificado. Documentados no README.
+
+---
+
+## 10. Sampler min_p e benchmarks automatizados (24/08/2026)
+
+| Item | Resultado |
+|---|---|
+| `min_p` no `Sampler` (config, CLI `--min-p`, API `"min_p"`) | ✅ mitiga o drift de gerações longas: 700 tokens com `min_p=0.05` mantêm ~99.9% ASCII (sem min_p: colapso para ~17% na segunda metade) |
+| `scripts/benchmark.py` | ✅ memória (pico RSS, cache 70.8 MB constante, buffers reutilizados), latência p50/p95 por fase, NLL teacher-forced + baseline opcional vs contexto completo (`--compare-hf`), saída `--json` |
+| Testes | ✅ 23/23 (2 novos para min_p) |
+
+Numba nos hot paths segue como evolução futura — OpenBLAS domina o GEMV e o ganho esperado é no overhead Python (~80ms/token), exigindo optional-dependency com fallback gracioso.

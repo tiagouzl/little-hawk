@@ -100,6 +100,7 @@ def _blocking_stream(
     rep_penalty: float,
     out_q: _queue_mod.Queue,
     cancel: threading.Event,
+    min_p: float = 0.0,
 ):
     """Roda em thread (CPU-bound). Empurra chunks decodificados; aborta via cancel.
 
@@ -127,7 +128,7 @@ _DONE = 'data: {"token": "[DONE]"}\n\n'
 _TIMEOUT_MSG = 'data: {"error": "timeout de inferência — aumente LITTLE_HAWK_TIMEOUT_SECS ou reduza max_tokens"}\n\n'
 
 
-async def _stream_sse(prompt: str, max_tokens: int, temperature: float, top_k: int, top_p: float, rep_penalty: float):
+async def _stream_sse(prompt: str, max_tokens: int, temperature: float, top_k: int, top_p: float, rep_penalty: float, min_p: float = 0.0):
     """Produz SSE segurando o semáforo durante todo o stream.
 
     O produtor roda em thread; se o cliente desconecta, o generator é fechado,
@@ -141,7 +142,7 @@ async def _stream_sse(prompt: str, max_tokens: int, temperature: float, top_k: i
     async with _ensure_semaphore():
         producer = threading.Thread(
             target=_blocking_stream,
-            args=(prompt, max_tokens, temperature, top_k, top_p, rep_penalty, out_q, cancel),
+            args=(prompt, max_tokens, temperature, top_k, top_p, rep_penalty, out_q, cancel, min_p),
             daemon=True,
         )
         producer.start()
@@ -186,6 +187,7 @@ class GenerateRequest(BaseModel):
     top_k: int = Field(40, ge=1)
     top_p: float = Field(0.92, ge=0.0, le=1.0)
     rep_penalty: float = Field(1.15, ge=0.0)
+    min_p: float = Field(0.0, ge=0.0, le=1.0)
 
 
 @app.post("/generate")
@@ -193,6 +195,7 @@ async def generate(req: GenerateRequest):
     if not req.prompt:
         raise HTTPException(400, "prompt é obrigatório")
     return StreamingResponse(
-        _stream_sse(req.prompt, req.max_tokens, req.temperature, req.top_k, req.top_p, req.rep_penalty),
+        _stream_sse(req.prompt, req.max_tokens, req.temperature, req.top_k, req.top_p,
+                    req.rep_penalty, req.min_p),
         media_type="text/event-stream",
     )

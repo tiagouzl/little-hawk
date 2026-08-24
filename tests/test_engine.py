@@ -128,3 +128,26 @@ class TestSampling:
         base = sum(s_base.sample(logits.copy()) == 3 for _ in range(500)) / 500
         pen = sum(s_pen.sample(logits.copy(), generated=[3] * 10) == 3 for _ in range(500)) / 500
         assert pen < base * 0.5  # penalidade derruba a prob. ao menos à metade
+
+
+class TestMinP:
+    def test_min_p_filters_tail(self, engine):
+        from runtime.inference import Sampler, SamplingConfig
+
+        eng = engine[1]
+        logits = np.full(eng.V, -10.0)
+        logits[7] = 2.0   # p_max
+        logits[8] = 1.5   # acima do corte min_p=0.3 (0.3·p_max≈0.11 → e^1.5/e^2≈0.6 passa)
+        logits[9] = -1.0  # abaixo do corte (e^-1/e^2≈0.05 < 0.11)
+        s = Sampler(SamplingConfig(min_p=0.3, top_k=0, top_p=1.0))
+        picks = {s.sample(logits.copy()) for _ in range(400)}
+        assert 9 not in picks and 8 in picks
+
+    def test_min_p_zero_keeps_all(self, engine):
+        from runtime.inference import Sampler, SamplingConfig
+
+        eng = engine[1]
+        logits = np.zeros(eng.V)
+        s = Sampler(SamplingConfig(min_p=0.0, top_k=0, top_p=1.0))
+        picks = {s.sample(logits.copy()) for _ in range(200)}
+        assert len(picks) > 50  # distribuição uniforme intacta
