@@ -424,3 +424,40 @@ acumulada por tokens de trials anteriores. Fix: `NexusEviction.reset()` chamado 
 
 Critério do projeto aplicado consistentemente (int8, Cython, scipy, ONNX-contrib):
 resultado negativo documentado é resultado.
+
+### 20.2 Conhecimento generalizável — o viés estrutural de evicção por atenção passada
+
+A limitação que derrubou o Nexus não é peculiaridade desta implementação — é uma
+propriedade de **toda** política de evicção pontuada por atenção passada (família
+H2O, SnapKV, Nexus). Vale registrado como princípio:
+
+**Princípio:** atenção acumulada mede *relevância retrospectiva* (o que o modelo
+olhou até agora), nunca *utilidade prospectiva* (o que será perguntado depois).
+Toda token que é importante mas silencioso — mencionado uma vez, nunca mais
+consultado até o fim do contexto — é indistinguível de filler para o score, e
+vira vítima exatamente por isso.
+
+**Tarefa adversarial por construção:** needle-in-haystack single-mention é o caso
+onde esse viés custa caro. A agulha tem exatamente dois picos de atenção — quando
+é lida e quando a pergunta chega — e passa todo o intervalo na "zona morta" de
+baixa atenção. Políticas de recência (FIFO) são imunes porque garantem cobertura
+posicional recente, não julgam importância.
+
+**Assinatura do padrão** (confirmada no sweep §20.1): perda concentrada onde a
+agulha passa mais tempo na zona morta (depth intermediário), paridade nos extremos
+(0.1: irrecuperável por qualquer política; 0.9: nunca sai da cauda recente). Se um
+resultado de evicção mostrar esse formato, desconfie de vitória por tuning — é o
+viés estrutural aparecendo.
+
+**Implicação prática:** para superar FIFO em recall de fatos raros, o score precisa
+antecipar utilidade futura — proxies plausíveis são surpresa/perplexity local no
+momento da escrita (tokens improváveis dado o contexto tendem a ser informativos),
+não frequência de atenção. Isso é redesign do scorer, não ajuste de α/R — e explica
+por que a literatura de attention-eviction historicamente luta contra recall de
+fatos "raros e não-repetidos" enquanto brilha em tarefas com documentos
+repetidamente consultados (multi-doc QA, summarization longa).
+
+**Metodologia (reafirmada pelo §20):** falso positivo validado (30/30 testes,
+diff numérico ok) é o tipo mais perigoso — parece evidência e mede artefato. O
+custo de caçar contaminação de estado antes de publicar veredito é sempre menor
+que o custo de carregar a conclusão errada para o design seguinte.
