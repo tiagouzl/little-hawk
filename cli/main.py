@@ -54,7 +54,8 @@ Exemplos:
     # Subcomando transplant
     transplant_parser = subparsers.add_parser('transplant', help='Transplanta pesos de modelo HF')
     transplant_parser.add_argument('--model', type=str, required=True,
-                                   choices=['smollm-135m', 'qwen2.5-0.5b'], help='Modelo a transplantar')
+                                   choices=['smollm-135m', 'smollm2-135m', 'smollm2-360m', 'smollm2-1.7b', 'qwen2.5-0.5b'],
+                                   help='Modelo a transplantar')
     transplant_parser.add_argument('--layers', type=int, default=4, help='Número de camadas')
 
     # Subcomando api
@@ -99,9 +100,9 @@ def handle_transplant(args):
     print(BANNER)
     print(f"  {GREEN}Transplantando modelo: {args.model}{RESET}")
 
-    if args.model == 'smollm-135m':
+    if args.model in ('smollm-135m', 'smollm2-135m', 'smollm2-360m', 'smollm2-1.7b'):
         from transplants.smollm import main as transplant_main
-        sys.argv = ['transplants/smollm.py', '--layers', str(args.layers)]
+        sys.argv = ['transplants/smollm.py', '--model', args.model, '--layers', str(args.layers)]
         transplant_main()
     elif args.model == 'qwen2.5-0.5b':
         from transplants.qwen import main as transplant_qwen_main
