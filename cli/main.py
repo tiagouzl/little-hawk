@@ -49,6 +49,8 @@ Exemplos:
     infer_parser.add_argument('--rep-penalty', type=float, default=DEFAULT_INFERENCE_CONFIG['rep_penalty'])
     infer_parser.add_argument('--min-p', type=float, default=DEFAULT_INFERENCE_CONFIG.get('min_p', 0.0),
                               help='Min-P sampling (0 desativa; 0.05-0.1 estabiliza gerações longas)')
+    infer_parser.add_argument('--eviction', type=str, default=os.getenv("LITTLE_HAWK_EVICTION", "fifo"),
+                              choices=['fifo', 'nexus'], help='Política de evicção: fifo (StreamingLLM) ou nexus (reservoir ponderado, trilha D)')
     infer_parser.add_argument('--no-panel', action='store_true', help='Sem painel de telemetria')
 
     # Subcomando transplant
@@ -70,7 +72,10 @@ def handle_infer(args):
     """Processa comando infer"""
     print(BANNER)
 
-    tok, engine = build_tokenizer_and_engine(args.weights)
+    eviction = getattr(args, 'eviction', os.getenv("LITTLE_HAWK_EVICTION", "fifo"))
+    if eviction == "nexus":
+        print(f"  {CYAN}Evicção Nexus (reservoir ponderado) ativa — trilha D{RESET}")
+    tok, engine = build_tokenizer_and_engine(args.weights, eviction=eviction)
     hawk = LittleHawkInference(tokenizer=tok, engine=engine)
 
     cfg = SamplingConfig(
@@ -123,7 +128,7 @@ def handle_api(args):
     import uvicorn
     uvicorn.run(app, host=args.host, port=args.port)
 
-def build_tokenizer_and_engine(weights_path):
+def build_tokenizer_and_engine(weights_path, eviction="fifo"):
     """Constrói tokenizer e engine baseado nos argumentos"""
     tok = BPETokenizer()
 
@@ -140,15 +145,18 @@ def build_tokenizer_and_engine(weights_path):
             meta = json.load(f)
 
         if is_onnx_enabled():
+            if eviction == "nexus":
+                print(f"  {YELLOW}ONNX + Nexus ainda não suportado — usando FIFO{RESET}")
             print(f"  {CYAN}ONNX Runtime ativado (LITTLE_HAWK_ONNX=1) — 1.21× vs NumPy, loop 600 validado{RESET}")
             engine = get_engine(npz_path=weights_path)
         else:
-            engine = MultiLayerEngine(
+            engine = get_engine(
                 d_model=int(meta.get("d_model", DEFAULT_MODEL_CONFIG["d_model"])),
                 n_heads=int(meta.get("n_heads", DEFAULT_MODEL_CONFIG["n_heads"])),
                 n_layers=int(meta.get("n_layers", DEFAULT_MODEL_CONFIG["n_layers"])),
                 sink_size=4, window_size=508,
                 vocab_size=int(meta.get("vocab_size", DEFAULT_MODEL_CONFIG["vocab_size"])),
+                eviction=eviction,
             )
         print(f"  {GREEN}✓ Carregando pesos...{RESET}")
         try:
@@ -159,7 +167,7 @@ def build_tokenizer_and_engine(weights_path):
     else:
         print(f"  {YELLOW}Modo demo (pesos aleatórios){RESET}")
         tok.train(CORPUS, vocab_size=DEFAULT_MODEL_CONFIG["vocab_size"], verbose=True)
-        engine = MultiLayerEngine(**DEFAULT_MODEL_CONFIG)
+        engine = get_engine(**{**DEFAULT_MODEL_CONFIG, "eviction": eviction})
 
     return tok, engine
 

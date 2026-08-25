@@ -20,7 +20,7 @@ class LlamaLayer:
     def _rms_norm(x,w):
         return _jit_rms_norm(x, w)
 
-    def attn_step(self,x_t,k_cache,v_cache,win_ptr,inv_freq,S,W,max_cap,wbi,si,n_ctx):
+    def attn_step(self,x_t,k_cache,v_cache,win_ptr,inv_freq,S,W,max_cap,wbi,si,n_ctx,slot_override=None):
         x_n=self._rms_norm(x_t,self.rms_attn);B=1
         _q=x_n@self.W_q;_k=x_n@self.W_k;_v=x_n@self.W_v
         if self.b_q is not None:_q=_q+self.b_q
@@ -31,8 +31,10 @@ class LlamaLayer:
         v=_v.reshape(B,1,self.n_heads,self.d_k).transpose(0,2,1,3)
         # ── Escrita ────────────────────────────────────────────────────────────
         # Primeiros S tokens → slots sink (0..S-1), imutáveis depois
-        # Tokens seguintes  → janela circular (S + win_ptr)
-        if n_ctx<=S: slot=n_ctx-1
+        # Tokens seguintes  → janela circular (S + win_ptr) ou slot externo (Nexus)
+        if slot_override is not None:
+            slot = int(slot_override)
+        elif n_ctx<=S: slot=n_ctx-1
         else:        slot=S+win_ptr
         k_cache[:,:,slot:slot+1,:]=k;v_cache[:,:,slot:slot+1,:]=v
         # ── Contexto: apenas slots preenchidos ─────────────────────────────────
@@ -62,7 +64,8 @@ class LlamaLayer:
         sc=(qr@kr.transpose(0,1,3,2))/math.sqrt(self.d_k)
         sc=sc-sc.max(axis=-1,keepdims=True);at=np.exp(sc);at/=at.sum(axis=-1,keepdims=True)
         out=(at@vc).transpose(0,2,1,3).reshape(B,1,self.d_model)@self.W_o
-        return out,k_cache,v_cache,float(at[:,:,0,0].mean()*100)
+        # Retorna at para políticas de evicção (Nexus); caller pode ignorar o 5º valor
+        return out,k_cache,v_cache,float(at[:,:,0,0].mean()*100),at
 
     def ffn(self,x):
         x_n=self._rms_norm(x,self.rms_ffn)

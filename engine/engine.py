@@ -10,10 +10,15 @@ from .jit_kernels import _rope_numpy as _rope
 
 
 class MultiLayerEngine:
-    def __init__(self,d_model=128,n_heads=4,n_layers=2,sink_size=4,window_size=28,vocab_size=512,rope_base=10000.0,seed=42):
+    def __init__(self,d_model=128,n_heads=4,n_layers=2,sink_size=4,window_size=28,vocab_size=512,rope_base=10000.0,seed=42,eviction="fifo"):
         self.d_model=d_model;self.n_heads=n_heads;self.d_k=d_model//n_heads
         self.n_layers=n_layers;self.S=sink_size;self.W=window_size
         self.max_cap=sink_size+window_size;self.V=vocab_size;self.bos_id=1;self.eos_id=2
+        self.eviction_name = eviction
+        self.eviction = None
+        if eviction == "nexus":
+            from .eviction import NexusEviction
+            self.eviction = NexusEviction(S=sink_size, W=window_size, seed=seed)
         rng=np.random.default_rng(seed);s=0.02
         self.embed=rng.normal(0,s,(vocab_size,d_model)).astype(np.float32)
         self.W_lm=rng.normal(0,s,(d_model,vocab_size)).astype(np.float32)
@@ -87,6 +92,10 @@ class MultiLayerEngine:
                 down=data[f"L{i}_down"].astype(np.float32),rms_ffn=data[f"L{i}_rms_ffn"].astype(np.float32),
                 n_heads=self.n_heads,d_k=self.d_k,b_q=bq,b_k=bk,b_v=bv))
         self._init_rope(rope_base);self._init_idx()
+        # Re-inicializa evicção com novo S/W se necessário (ex: demo 28 → real 508)
+        if self.eviction_name == "nexus":
+            from .eviction import NexusEviction
+            self.eviction = NexusEviction(S=self.S, W=self.W, seed=42)
           # Removido print direto para manter núcleo limpo
     def init_cache(self):
         sh=(1,self.n_heads,self.max_cap,self.d_k)
@@ -95,18 +104,47 @@ class MultiLayerEngine:
     def step(self,token_id,caches,win_ptr,n_ctx):
         x=self.embed[token_id][np.newaxis,np.newaxis,:]
         sm0=0.0;new_caches=[]
+        # Evicção Nexus: escolhe vítima por score, não por FIFO
+        slot_override = None
+        ev_win_ptr = win_ptr
+        if self.eviction is not None and n_ctx > self.max_cap:
+            # Slot da próxima escrita vem do reservoir (anel intermediário)
+            slot_override, ev_win_ptr = self.eviction.next_slot(n_ctx)
         for li,layer in enumerate(self.layers):
             kc,vc=caches[li]
-            ao,kc,vc,sm=layer.attn_step(x,kc,vc,win_ptr,self.inv_freq,
+            res = layer.attn_step(x,kc,vc,win_ptr,self.inv_freq,
                                           self.S,self.W,self.max_cap,
-                                          self.wbi,self.si,n_ctx)
+                                          self.wbi,self.si,n_ctx,slot_override=slot_override)
+            # Compat: attn_step agora retorna 5 valores (out, kc, vc, sm, at); antigos retornavam 4
+            if len(res) == 5:
+                ao,kc,vc,sm,at = res
+            else:
+                ao,kc,vc,sm = res
+                at = None
             x=x+ao;x=x+layer.ffn(x);new_caches.append((kc,vc))
-            if li==0:sm0=sm
+            if li==0:
+                sm0=sm
+                # Atualiza scores do reservoir com pesos de atenção da camada 0
+                if self.eviction is not None and at is not None:
+                    # Reconstrói ctx como em transformer.py para atualizar EMA
+                    n_sink = min(n_ctx, self.S); n_win = max(0, min(n_ctx-self.S, self.W))
+                    if n_win < self.W:
+                        win_ctx = np.arange(self.S, self.S+n_win, dtype=np.int64)
+                    else:
+                        win_ctx = (self.wbi+win_ptr+1)%self.W+self.S
+                    ctx = np.concatenate([self.si[:n_sink], win_ctx])
+                    try:
+                        self.eviction.update_scores(ctx, at)
+                    except Exception:
+                        pass
         xn=self._rms_norm(x[:,0,:],self.norm_w)
         # lm_head via [V,d] contígua: sgemv orientado a linhas (~8ms vs ~14ms)
         logits=(self.W_lm_t @ xn[0].reshape(-1,1)).T
-        # win_ptr só avança quando estamos na fase de janela
-        new_win_ptr=(win_ptr+1)%self.W if n_ctx>self.S else win_ptr
+        if self.eviction is not None and n_ctx > self.max_cap:
+            new_win_ptr = ev_win_ptr
+        else:
+            # win_ptr só avança quando estamos na fase de janela
+            new_win_ptr=(win_ptr+1)%self.W if n_ctx>self.S else win_ptr
         return logits,new_caches,new_win_ptr,sm0
     def prefill(self,tokens,caches=None):
         """Forward batched do prompt.

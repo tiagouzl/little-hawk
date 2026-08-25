@@ -32,6 +32,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from engine import get_engine
 from engine.engine import MultiLayerEngine
 from runtime.inference import LittleHawkInference, SamplingConfig
 from runtime.tokenizer import BPETokenizer, CORPUS
@@ -39,6 +40,7 @@ from runtime.tokenizer import BPETokenizer, CORPUS
 MAX_CONCURRENCY = int(os.getenv("LITTLE_HAWK_MAX_CONCURRENCY", "2"))
 TIMEOUT_SECS = float(os.getenv("LITTLE_HAWK_TIMEOUT_SECS", "300"))
 DEFAULT_WEIGHTS = os.getenv("LITTLE_HAWK_WEIGHTS", "little_hawk_weights.npz")
+EVICTION = os.getenv("LITTLE_HAWK_EVICTION", "fifo")
 
 # Modelo carregado uma vez por processo (single-process, escopo educacional — ver docstring)
 _hawk = None
@@ -89,19 +91,20 @@ def load_model(weights_path: str | None = None):
             tok.load_donor_vocab(meta)
             with open(meta, encoding="utf-8") as f:
                 m = json.load(f)
-            eng = MultiLayerEngine(
+            eng = get_engine(
                 d_model=int(m.get("d_model", 576)),
                 n_heads=int(m.get("n_heads", 9)),
                 n_layers=int(m.get("n_layers", 30)),
                 sink_size=4,
                 window_size=508,
                 vocab_size=int(m.get("vocab_size", len(tok.vocab))),
+                eviction=EVICTION,
             )
             eng.load_weights(weights_path)
         else:
             tok.train(CORPUS, vocab_size=512, verbose=False)
-            eng = MultiLayerEngine(
-                d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=len(tok.vocab)
+            eng = get_engine(
+                d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=len(tok.vocab), eviction=EVICTION
             )
         _tok = tok
         _hawk = LittleHawkInference(tokenizer=tok, engine=eng)
@@ -195,6 +198,7 @@ async def health():
         "mode": "weights" if os.path.exists(DEFAULT_WEIGHTS) else "demo",
         "max_concurrency": MAX_CONCURRENCY,
         "timeout_secs": TIMEOUT_SECS,
+        "eviction": EVICTION,
     }
 
 
