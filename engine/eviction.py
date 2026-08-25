@@ -120,3 +120,66 @@ class NexusEviction:
         self.scores[ctx] = self.alpha * self.scores[ctx] + (1 - self.alpha) * w.astype(np.float32)
         # Sinks mantêm score alto para nunca serem vítimas (não estão no anel)
         self.scores[:self.S] = 1.0
+
+
+class NexusSalienceEviction(NexusEviction):
+    """Reservoir com piso de saliência — surpresa na chegada + EMA de atenção.
+
+    Motivação (ANALISE §20.2): atenção passada mede relevância retrospectiva;
+    um token recém-chegado tem atenção zero por definição e é indistinguível
+    de filler para o EMA. O surprisal -log P(token|contexto) está disponível
+    NO instante da chegada (o softmax do forward já o produz) e dá "piso" de
+    proteção que não decai por silêncio.
+
+    score_combinado(slot) = w_attn · EMA(atenção) + w_sal · salience(slot)
+
+    Limitação conhecida: surpresa captura fatos estatisticamente incomuns
+    (números, nomes raros); fato semanticamente crítico mas lexicalmente banal
+    ("a reunião é na terça-feira") tem surpresa baixa. Intrínseco a proxies de
+    surpresa, não peculiar a esta implementação.
+    """
+
+    def __init__(self, S=4, W=508, R=64, alpha=0.9, seed=42,
+                 w_attn=1.0, w_sal=0.15):
+        super().__init__(S=S, W=W, R=R, alpha=alpha, seed=seed)
+        self.w_attn = w_attn
+        self.w_sal = w_sal  # 10 nats → contribuição 1.5 vs atenção ≤1; filler ~3 nats → 0.45
+        # Saliência congelada por slot (-log p na chegada); não decai com o tempo
+        self.salience = np.zeros(self.max_cap, dtype=np.float32)
+
+    def reset(self):
+        super().reset()
+        self.salience = np.zeros(self.max_cap, dtype=np.float32)
+
+    def set_salience(self, slot, value):
+        self.salience[int(slot)] = float(value)
+
+    def set_salience_array(self, slots, values):
+        idx = np.asarray(slots, dtype=np.int64)
+        self.salience[idx] = np.asarray(values, dtype=np.float32)
+
+    def _combined(self):
+        return self.w_attn * self.scores + self.w_sal * self.salience
+
+    def next_slot(self, n_ctx):
+        # Fase de sinks: fora da ordem de janela
+        if n_ctx <= self.S:
+            return n_ctx - 1, self.win_ptr
+        # Fill direto (sem prefill): sequencial
+        if len(self.order) < self.W:
+            slot = self.S + len(self.order)
+            self.order.append(slot)
+            return slot, (self.win_ptr + 1) % self.W
+        # Estacionária: vítima no anel pelo score COMBINADO (EMA + saliência)
+        ring_size = self.W - self.R
+        ring = self.order[:ring_size]
+        combined = self._combined()
+        ring_scores = combined[ring]
+        k = min(32, len(ring))
+        idx_sorted = np.argpartition(ring_scores, k - 1)[:k]
+        chosen = self.rng.choice(idx_sorted)
+        victim = int(ring[int(chosen)])
+        self.order.remove(victim)
+        self.order.append(victim)
+        self.n_reservoir += 1
+        return victim, (self.win_ptr + 1) % self.W

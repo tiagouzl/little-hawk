@@ -461,3 +461,27 @@ repetidamente consultados (multi-doc QA, summarization longa).
 diff numérico ok) é o tipo mais perigoso — parece evidência e mede artefato. O
 custo de caçar contaminação de estado antes de publicar veredito é sempre menor
 que o custo de carregar a conclusão errada para o design seguinte.
+
+### 20.3 Nexus-salience — hipótese PRÉ-REGISTRADA antes da execução (25/08/2026)
+
+**Mudança:** `NexusSalienceEviction` (`engine/eviction.py`) — score combinado
+`w_attn·EMA(atenção) + w_sal·surprisal(slot)`, com `w_attn=1.0, w_sal=0.15`
+(10 nats → contribuição 1.5 vs atenção ≤1; filler ~3 nats → 0.45 — separação
+por outliers, não por escala absoluta). Surprisal = -log P(token|contexto)
+capturado na chegada: `prefill()` computa logits por posição só neste modo
+(GEMM extra [T,V]); `step()` encadeia via `_prev_logits`. Reset em
+`init_cache()`. Opt-in: `--eviction nexus-salience` / env.
+
+**Limitação conhecida (documentada a priori):** surpresa captura fatos
+estatisticamente incomuns; fato semanticamente crítico mas lexicalmente banal
+("a reunião é na terça-feira") tem surpresa baixa. Intrínseco a proxies de
+surpresa (Memorizing Transformers e afins).
+
+**Hipótese falseável (registrada ANTES do sweep):**
+- H1: nexus-salience > fifo em depth 0.5 (onde nexus puro fez 0/7 — a agulha
+  tem surpresa altíssima e o piso deve protegê-la na zona morta);
+- H2: paridade em 0.9 (agulha já fica na cauda recente);
+- H3: sem piora em 0.1 (irrecuperável por qualquer política).
+Falsificado se: ganho não aparecer em 0.5, ou aparecer regressão em 0.1/0.9.
+Protocolo idêntico ao §20.1: 21 prompts pareados (seed 42), 3 políticas,
+McNemar exato por profundidade.

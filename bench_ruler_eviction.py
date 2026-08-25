@@ -392,6 +392,11 @@ def main():
         "--prompt-style", choices=["continuation", "instruct"], default="continuation",
         help="'continuation' (default) para checkpoints base; 'instruct' para checkpoints *-Instruct*",
     )
+    ap.add_argument(
+        "--modes", type=str, default=None,
+        help="Políticas de evicção separadas por vírgula (ex: 'fifo,nexus,nexus-salience'). "
+             "Default: fifo,nexus. Desenho pareado: cada prompt roda em TODAS as modas.",
+    )
     args = ap.parse_args()
 
     if not args.mock and not args.weights:
@@ -408,40 +413,45 @@ def main():
         eviction_modes = ["fifo"]  # dentro da janela, fifo == nexus (nada é evictado ainda)
         json_path = args.json or "ruler_baseline_results.json"
     else:
-        eviction_modes = ["fifo", "nexus"]
-        json_path = args.json or "ruler_eviction_results.json"
+        eviction_modes = (
+            [m.strip() for m in args.modes.split(",")] if args.modes else ["fifo", "nexus"]
+        )
+        json_path = args.json or ("ruler_eviction_results.json" if len(eviction_modes) == 2 else "ruler_multimode_results.json")
 
     results = run_sweep(args, eviction_modes)
     summary, overall = print_summary(results, eviction_modes, args.context_lengths, args.depths)
 
-    if not args.baseline_only and len(eviction_modes) == 2:
-        mode_a, mode_b = eviction_modes  # ["fifo", "nexus"]
+    if not args.baseline_only and len(eviction_modes) >= 2:
+        from itertools import combinations
         print("\n" + "=" * 72)
-        print(f"McNemar pareado por profundidade ({mode_a} vs {mode_b}, mesmos prompts)")
+        print("McNemar pareado por profundidade (mesmos prompts, todos os pares)")
         print("=" * 72)
-        by_depth = paired_breakdown(results, mode_a, mode_b, group_key=lambda r: r.depth)
-        header = f"{'depth':>6} {'n':>4} {f'acc_{mode_a}':>10} {f'acc_{mode_b}':>10} {'delta':>8} {'b/c':>7} {'p (McNemar)':>12}"
-        print(header)
-        print("-" * len(header))
-        for depth in sorted(by_depth):
-            g = by_depth[depth]
-            delta = g["acc_b"] - g["acc_a"]
-            sig = " *" if g["mcnemar_p"] < 0.05 else ("  " if g["n"] * 2 >= 20 else " (n baixo)")
-            print(
-                f"{depth:6.2f} {g['n']:4d} {g['acc_a']:10.2f} {g['acc_b']:10.2f} {delta:+8.2f} "
-                f"{g['b_only']:>3d}/{g['c_only']:<3d} {g['mcnemar_p']:12.3f}{sig}"
-            )
-        all_group = paired_breakdown(results, mode_a, mode_b, group_key=lambda r: "all")
-        if "all" in all_group:
-            g = all_group["all"]
+        paired_all = {}
+        for mode_a, mode_b in combinations(eviction_modes, 2):
+            print(f"\n--- {mode_a} vs {mode_b} ---")
+            by_depth = paired_breakdown(results, mode_a, mode_b, group_key=lambda r: r.depth)
+            header = f"{'depth':>6} {'n':>4} {f'acc_{mode_a[:12]}':>14} {f'acc_{mode_b[:12]}':>14} {'delta':>8} {'b/c':>7} {'p':>8}"
+            print(header)
+            print("-" * len(header))
+            for depth in sorted(by_depth):
+                g = by_depth[depth]
+                delta = g["acc_b"] - g["acc_a"]
+                sig = " *" if g["mcnemar_p"] < 0.05 else ("  " if (g["b_only"] + g["c_only"]) >= 10 else " (n baixo)")
+                print(
+                    f"{depth:6.2f} {g['n']:4d} {g['acc_a']:14.2f} {g['acc_b']:14.2f} {delta:+8.2f} "
+                    f"{g['b_only']:>3d}/{g['c_only']:<3d} {g['mcnemar_p']:8.3f}{sig}"
+                )
+            all_group = paired_breakdown(results, mode_a, mode_b, group_key=lambda r: "all")
+            g = all_group.get("all", {"n": 0})
             print("-" * len(header))
             print(
-                f"{'TODOS':>6} {g['n']:4d} {g['acc_a']:10.2f} {g['acc_b']:10.2f} "
-                f"{g['acc_b'] - g['acc_a']:+8.2f} {g['b_only']:>3d}/{g['c_only']:<3d} {g['mcnemar_p']:12.3f}"
+                f"{'TODOS':>6} {g['n']:4d} {g['acc_a']:14.2f} {g['acc_b']:14.2f} "
+                f"{g['acc_b'] - g['acc_a']:+8.2f} {g['b_only']:>3d}/{g['c_only']:<3d} {g['mcnemar_p']:8.3f}"
             )
+            paired_all[f"{mode_a}_vs_{mode_b}"] = {"by_depth": by_depth, "overall": g}
         print(
-            "\n(* = p<0.05; 'n baixo' sinaliza menos de ~20 discordâncias pareadas na profundidade, "
-            "onde mesmo um delta grande pode não ser conclusivo — ver recomendação de ≥20 prompts)"
+            "\n(* = p<0.05; 'n baixo' sinaliza menos de ~10 discordâncias pareadas no par, "
+            "onde mesmo um delta grande pode não ser conclusivo)"
         )
 
     if args.baseline_only:
@@ -469,11 +479,13 @@ def main():
         print(f"\n[aviso] {n_timeouts}/{len(results)} trials bateram timeout ({args.timeout}s) — considere aumentar --timeout.")
 
     paired_json = None
-    if not args.baseline_only and len(eviction_modes) == 2:
-        mode_a, mode_b = eviction_modes
-        by_depth = paired_breakdown(results, mode_a, mode_b, group_key=lambda r: r.depth)
-        all_group = paired_breakdown(results, mode_a, mode_b, group_key=lambda r: "all")
-        paired_json = {"mode_a": mode_a, "mode_b": mode_b, "by_depth": by_depth, "overall": all_group.get("all")}
+    if not args.baseline_only and len(eviction_modes) >= 2:
+        from itertools import combinations
+        paired_json = {}
+        for mode_a, mode_b in combinations(eviction_modes, 2):
+            by_depth = paired_breakdown(results, mode_a, mode_b, group_key=lambda r: r.depth)
+            all_group = paired_breakdown(results, mode_a, mode_b, group_key=lambda r: "all")
+            paired_json[f"{mode_a}_vs_{mode_b}"] = {"by_depth": by_depth, "overall": all_group.get("all")}
 
     with open(json_path, "w") as f:
         json.dump(

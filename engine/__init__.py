@@ -27,7 +27,7 @@ def get_engine(*args, **kwargs):
     eviction = kwargs.pop("eviction", None)
     if eviction is None:
         eviction = os.getenv("LITTLE_HAWK_EVICTION", "fifo")
-    if eviction not in ("fifo", "nexus"):
+    if eviction not in ("fifo", "nexus", "nexus-salience"):
         eviction = "fifo"
     return MultiLayerEngine(*args, eviction=eviction, **kwargs)
 

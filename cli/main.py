@@ -50,7 +50,8 @@ Exemplos:
     infer_parser.add_argument('--min-p', type=float, default=DEFAULT_INFERENCE_CONFIG.get('min_p', 0.0),
                               help='Min-P sampling (0 desativa; 0.05-0.1 estabiliza gerações longas)')
     infer_parser.add_argument('--eviction', type=str, default=os.getenv("LITTLE_HAWK_EVICTION", "fifo"),
-                              choices=['fifo', 'nexus'], help='Política de evicção: fifo (StreamingLLM) ou nexus (reservoir ponderado, trilha D)')
+                              choices=['fifo', 'nexus', 'nexus-salience'],
+                              help='Política de evicção: fifo (StreamingLLM), nexus (reservoir ponderado) ou nexus-salience (reservoir + piso de surpresa na chegada)')
     infer_parser.add_argument('--no-panel', action='store_true', help='Sem painel de telemetria')
 
     # Subcomando transplant

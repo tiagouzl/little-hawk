@@ -249,3 +249,54 @@ class TestPrefill:
         assert wp_a == wp_b
         d_k = max(np.abs(caches_a[i][0] - caches_b[i][0]).max() for i in range(eng.n_layers))
         assert d_k < 2e-4
+
+
+class TestNexusSalience:
+    def _policy(self):
+        from engine.eviction import NexusSalienceEviction
+
+        # W=64 → anel W-R=56 > k=32 (com anel < k, argpartition degeneraria em
+        # escolha uniforme sobre tudo e a saliência não influiria — caso só
+        # possível em configs de teste, não na produção W=508)
+        p = NexusSalienceEviction(S=4, W=64, R=8, seed=7)
+        # enche a janela
+        for n in range(5, 5 + 64 + 1):
+            p.next_slot(n)
+        return p
+
+    def test_salience_protects_high_surprise_slot(self):
+        p = self._policy()
+        ring = p.order[: p.W - p.R]
+        # slot protegido: surpresa máxima; resto zerado
+        protected = ring[0]
+        p.set_salience(protected, 15.0)
+        victims = {p.next_slot(100)[0] for _ in range(200)}
+        assert protected not in victims, "slot com surpresa alta não deve ser vítima"
+
+    def test_low_salience_still_evictable(self):
+        p = self._policy()
+        ring = p.order[: p.W - p.R]
+        target = ring[0]
+        p.set_salience(target, 0.0)
+        victims = {p.next_slot(100)[0] for _ in range(200)}
+        assert target in victims, "slot sem surpresa deve ser evictável"
+
+    def test_reset_clears_salience(self):
+        p = self._policy()
+        p.set_salience(10, 12.0)
+        p.reset()
+        assert p.salience.sum() == 0 and p.order == []
+
+    def test_engine_mode_wiring(self):
+        from engine.engine import MultiLayerEngine
+        import numpy as np
+
+        eng = MultiLayerEngine(d_model=128, n_heads=4, n_layers=2, sink_size=4,
+                               window_size=28, vocab_size=512, eviction="nexus-salience")
+        caches = eng.init_cache(); wp = 0
+        lg, caches, wp, _ = eng.prefill(list(range(20)), caches)
+        assert eng.eviction.salience[1:20].sum() > 0, "prefill deve popular saliência"
+        for n in range(21, 60):
+            logits, caches, wp, _ = eng.step(n % eng.V, caches, wp, n)
+            assert np.isfinite(logits).all()
+        assert len(eng.eviction.order) == 28 and len(set(eng.eviction.order)) == 28

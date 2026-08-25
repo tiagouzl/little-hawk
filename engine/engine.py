@@ -19,6 +19,11 @@ class MultiLayerEngine:
         if eviction == "nexus":
             from .eviction import NexusEviction
             self.eviction = NexusEviction(S=sink_size, W=window_size, seed=seed)
+        elif eviction == "nexus-salience":
+            from .eviction import NexusSalienceEviction
+            self.eviction = NexusSalienceEviction(S=sink_size, W=window_size, seed=seed)
+        # Logits do passo anterior → surprisal do token atual na chegada (só modos salience)
+        self._prev_logits = None
         rng=np.random.default_rng(seed);s=0.02
         self.embed=rng.normal(0,s,(vocab_size,d_model)).astype(np.float32)
         self.W_lm=rng.normal(0,s,(d_model,vocab_size)).astype(np.float32)
@@ -96,25 +101,45 @@ class MultiLayerEngine:
         if self.eviction_name == "nexus":
             from .eviction import NexusEviction
             self.eviction = NexusEviction(S=self.S, W=self.W, seed=42)
+        elif self.eviction_name == "nexus-salience":
+            from .eviction import NexusSalienceEviction
+            self.eviction = NexusSalienceEviction(S=self.S, W=self.W, seed=42)
           # Removido print direto para manter núcleo limpo
     def init_cache(self):
         sh=(1,self.n_heads,self.max_cap,self.d_k)
         # Política de evicção reseta junto — evita contaminação entre gerações
         if self.eviction is not None and hasattr(self.eviction, "reset"):
             self.eviction.reset()
+        # Cadeia de surprisal recomeça a cada geração
+        self._prev_logits = None
         return [(np.zeros(sh,np.float32),np.zeros(sh,np.float32)) for _ in range(self.n_layers)]
     _rms_norm = staticmethod(LlamaLayer._rms_norm)
+    def _salience_of(self, token_id):
+        """-log P(token | contexto anterior) a partir dos logits do passo anterior."""
+        if self._prev_logits is None:
+            return 0.0
+        lg = self._prev_logits.reshape(-1).astype(np.float64)
+        m = lg.max()
+        lse = np.log(np.exp(lg - m).sum()) + m
+        return float(-(lg[token_id] - lse))
+
     def step(self,token_id,caches,win_ptr,n_ctx):
         x=self.embed[token_id][np.newaxis,np.newaxis,:]
         sm0=0.0;new_caches=[]
         # Evicção Nexus: escolhe vítima por score e fornece o ctx real (ordem de recência)
         slot_override = None;ctx_override = None;ev_win_ptr = win_ptr
+        salience_aware = self.eviction is not None and hasattr(self.eviction, "set_salience")
+        if salience_aware:
+            # Surprisal do token ATUAL vem dos logits do passo anterior (disponível na chegada)
+            sal = self._salience_of(token_id)
         if self.eviction is not None and n_ctx > self.S:
             # A partir do fim dos sinks a política rastreia toda escrita (fill ou reservoir)
             slot_override, ev_win_ptr = self.eviction.next_slot(n_ctx)
             if n_ctx > self.max_cap:
                 # Estacionária: leitura também vem da política (ordem real de recência)
                 ctx_override = self.eviction.ctx_array()
+            if salience_aware and slot_override is not None:
+                self.eviction.set_salience(int(slot_override), sal)
         for li,layer in enumerate(self.layers):
             kc,vc=caches[li]
             res = layer.attn_step(x,kc,vc,win_ptr,self.inv_freq,
@@ -149,6 +174,8 @@ class MultiLayerEngine:
         xn=self._rms_norm(x[:,0,:],self.norm_w)
         # lm_head via [V,d] contígua: sgemv orientado a linhas (~8ms vs ~14ms)
         logits=(self.W_lm_t @ xn[0].reshape(-1,1)).T
+        if salience_aware:
+            self._prev_logits = logits  # prediz o próximo token — cadeia de surprisal
         if self.eviction is not None and n_ctx > self.max_cap:
             new_win_ptr = ev_win_ptr
         else:
@@ -203,7 +230,21 @@ class MultiLayerEngine:
         xn=self._rms_norm(x[0,-1],self.norm_w)
         logits=(self.W_lm_t@xn.reshape(-1,1)).T
         new_win_ptr=(T-self.S)%self.W if T>self.S else 0
+        # Saliência por posição: logits completos [T,V] só no modo salience (custo extra
+        # de um GEMM [T,d]@[d,V] aceitável só quando o sinal é usado)
+        if self.eviction is not None and hasattr(self.eviction, "set_salience"):
+            xn_all = self._rms_norm(x[0], self.norm_w)              # [T,d]
+            lg_all = xn_all @ self.W_lm_t.T                          # [T,V]
+            m = lg_all.max(axis=-1, keepdims=True)
+            lsm = lg_all - m
+            lsm = lsm - np.log(np.exp(lsm).sum(axis=-1, keepdims=True))
+            # posição i prevê ids[i+1] → slot i+1 recebe -logp; BOS (slot 0) fica 0
+            slots = np.arange(1, T, dtype=np.int64)
+            vals = -lsm[np.arange(T - 1), ids[1:]]
+            self.eviction.set_salience_array(slots, vals)
         # Sincroniza política de evicção com o estado pós-fill (slots S..T-1 vivos, em ordem)
         if self.eviction is not None and hasattr(self.eviction, "sync_after_fill"):
             self.eviction.sync_after_fill(T)
+        if hasattr(self.eviction, "set_salience"):
+            self._prev_logits = logits  # cadeia continua nos steps pós-fill
         return logits,new_caches,new_win_ptr,sm0
