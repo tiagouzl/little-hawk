@@ -175,11 +175,12 @@ class MultiLayerEngine:
         for li,layer in enumerate(self.layers):
             kc,vc=caches[li]
             x_n=self._rms_norm(x,layer.rms_attn)
-            q=(x_n@layer.W_q).reshape(1,T,self.n_heads,self.d_k).transpose(0,2,1,3)
-            k=(x_n@layer.W_k).reshape(1,T,self.n_heads,self.d_k).transpose(0,2,1,3)
-            v=(x_n@layer.W_v).reshape(1,T,self.n_heads,self.d_k).transpose(0,2,1,3)
+            _q = x_n @ layer.W_q; _k = x_n @ layer.W_k; _v = x_n @ layer.W_v
             if layer.b_q is not None:
-                q=q+layer.b_q;k=k+layer.b_k;v=v+layer.b_v
+                _q = _q + layer.b_q; _k = _k + layer.b_k; _v = _v + layer.b_v
+            q=_q.reshape(1,T,self.n_heads,self.d_k).transpose(0,2,1,3)
+            k=_k.reshape(1,T,self.n_heads,self.d_k).transpose(0,2,1,3)
+            v=_v.reshape(1,T,self.n_heads,self.d_k).transpose(0,2,1,3)
             # fase fill: slots 0..T-1 (sequenciais), imutáveis adiante
             kc[0,:,:T,:]=k[0];vc[0,:,:T,:]=v[0]
             qr=_rope(q,pos,self.inv_freq);kr=_rope(kc[:,:,:T,:],pos,self.inv_freq)
