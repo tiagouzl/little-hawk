@@ -104,7 +104,13 @@ def load_model(weights_path: str | None = None):
         else:
             tok.train(CORPUS, vocab_size=512, verbose=False)
             eng = get_engine(
-                d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=len(tok.vocab), eviction=EVICTION
+                d_model=128,
+                n_heads=4,
+                n_layers=2,
+                sink_size=4,
+                window_size=28,
+                vocab_size=len(tok.vocab),
+                eviction=EVICTION,
             )
         _tok = tok
         _hawk = LittleHawkInference(tokenizer=tok, engine=eng)

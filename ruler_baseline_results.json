@@ -1,0 +1,240 @@
+{
+  "mode": "baseline_only",
+  "config": {
+    "weights": "little_hawk_weights.npz",
+    "cli_module": "cli.main",
+    "context_lengths": [
+      100,
+      256,
+      400
+    ],
+    "depths": [
+      0.1,
+      0.5,
+      0.9
+    ],
+    "repeats": 2,
+    "min_p": 0.05,
+    "max_tokens": 8,
+    "timeout": 120,
+    "seed": 1234,
+    "mock": false,
+    "baseline_only": true,
+    "json": null,
+    "prompt_style": "continuation"
+  },
+  "summary": [
+    {
+      "context_length": 100,
+      "depth": 0.1,
+      "fifo": 1.0
+    },
+    {
+      "context_length": 100,
+      "depth": 0.5,
+      "fifo": 1.0
+    },
+    {
+      "context_length": 100,
+      "depth": 0.9,
+      "fifo": 0.5
+    },
+    {
+      "context_length": 256,
+      "depth": 0.1,
+      "fifo": 0.5
+    },
+    {
+      "context_length": 256,
+      "depth": 0.5,
+      "fifo": 1.0
+    },
+    {
+      "context_length": 256,
+      "depth": 0.9,
+      "fifo": 1.0
+    },
+    {
+      "context_length": 400,
+      "depth": 0.1,
+      "fifo": 0.0
+    },
+    {
+      "context_length": 400,
+      "depth": 0.5,
+      "fifo": 0.5
+    },
+    {
+      "context_length": 400,
+      "depth": 0.9,
+      "fifo": 1.0
+    }
+  ],
+  "overall": {
+    "fifo": 0.7222222222222222
+  },
+  "raw": [
+    {
+      "context_length": 100,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 16.037,
+      "peak_rss_mb": 1368.984375,
+      "timed_out": false
+    },
+    {
+      "context_length": 100,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 18.751,
+      "peak_rss_mb": 1472.10546875,
+      "timed_out": false
+    },
+    {
+      "context_length": 100,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 24.571,
+      "peak_rss_mb": 1475.16796875,
+      "timed_out": false
+    },
+    {
+      "context_length": 100,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 22.163,
+      "peak_rss_mb": 1443.62109375,
+      "timed_out": false
+    },
+    {
+      "context_length": 100,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 24.99,
+      "peak_rss_mb": 1467.359375,
+      "timed_out": false
+    },
+    {
+      "context_length": 100,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 22.259,
+      "peak_rss_mb": 1478.30078125,
+      "timed_out": false
+    },
+    {
+      "context_length": 256,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 27.687,
+      "peak_rss_mb": 1396.40234375,
+      "timed_out": false
+    },
+    {
+      "context_length": 256,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 28.917,
+      "peak_rss_mb": 1396.01953125,
+      "timed_out": false
+    },
+    {
+      "context_length": 256,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 23.475,
+      "peak_rss_mb": 1449.18359375,
+      "timed_out": false
+    },
+    {
+      "context_length": 256,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 22.973,
+      "peak_rss_mb": 1465.359375,
+      "timed_out": false
+    },
+    {
+      "context_length": 256,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 27.982,
+      "peak_rss_mb": 1412.14453125,
+      "timed_out": false
+    },
+    {
+      "context_length": 256,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 22.968,
+      "peak_rss_mb": 1422.08203125,
+      "timed_out": false
+    },
+    {
+      "context_length": 400,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 76.101,
+      "peak_rss_mb": 1369.07421875,
+      "timed_out": false
+    },
+    {
+      "context_length": 400,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 64.16,
+      "peak_rss_mb": 1419.6796875,
+      "timed_out": false
+    },
+    {
+      "context_length": 400,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 63.03,
+      "peak_rss_mb": 1481.015625,
+      "timed_out": false
+    },
+    {
+      "context_length": 400,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 60.938,
+      "peak_rss_mb": 1467.08984375,
+      "timed_out": false
+    },
+    {
+      "context_length": 400,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 70.112,
+      "peak_rss_mb": 1424.04296875,
+      "timed_out": false
+    },
+    {
+      "context_length": 400,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 73.95,
+      "peak_rss_mb": 1459.1640625,
+      "timed_out": false
+    }
+  ]
+}

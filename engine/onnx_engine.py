@@ -114,11 +114,9 @@ class OnnxEngine:
         self._init_onnx_caches()
         caches = caches or self.init_cache()
         win_ptr = 0
-        n_ctx = 0
         logits = None
         sm = 0.0
-        for tid in ids:
-            n_ctx += 1
+        for n_ctx, tid in enumerate(ids, start=1):
             logits, caches, win_ptr, sm = self.step(int(tid), caches, win_ptr, n_ctx)
         return logits, caches, win_ptr, sm
 

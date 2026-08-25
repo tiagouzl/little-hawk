@@ -104,17 +104,20 @@ class MultiLayerEngine:
     def step(self,token_id,caches,win_ptr,n_ctx):
         x=self.embed[token_id][np.newaxis,np.newaxis,:]
         sm0=0.0;new_caches=[]
-        # Evicção Nexus: escolhe vítima por score, não por FIFO
-        slot_override = None
-        ev_win_ptr = win_ptr
-        if self.eviction is not None and n_ctx > self.max_cap:
-            # Slot da próxima escrita vem do reservoir (anel intermediário)
+        # Evicção Nexus: escolhe vítima por score e fornece o ctx real (ordem de recência)
+        slot_override = None;ctx_override = None;ev_win_ptr = win_ptr
+        if self.eviction is not None and n_ctx > self.S:
+            # A partir do fim dos sinks a política rastreia toda escrita (fill ou reservoir)
             slot_override, ev_win_ptr = self.eviction.next_slot(n_ctx)
+            if n_ctx > self.max_cap:
+                # Estacionária: leitura também vem da política (ordem real de recência)
+                ctx_override = self.eviction.ctx_array()
         for li,layer in enumerate(self.layers):
             kc,vc=caches[li]
             res = layer.attn_step(x,kc,vc,win_ptr,self.inv_freq,
                                           self.S,self.W,self.max_cap,
-                                          self.wbi,self.si,n_ctx,slot_override=slot_override)
+                                          self.wbi,self.si,n_ctx,
+                                          slot_override=slot_override,ctx_override=ctx_override)
             # Compat: attn_step agora retorna 5 valores (out, kc, vc, sm, at); antigos retornavam 4
             if len(res) == 5:
                 ao,kc,vc,sm,at = res
@@ -126,15 +129,18 @@ class MultiLayerEngine:
                 sm0=sm
                 # Atualiza scores do reservoir com pesos de atenção da camada 0
                 if self.eviction is not None and at is not None:
-                    # Reconstrói ctx como em transformer.py para atualizar EMA
-                    n_sink = min(n_ctx, self.S); n_win = max(0, min(n_ctx-self.S, self.W))
-                    if n_win < self.W:
-                        win_ctx = np.arange(self.S, self.S+n_win, dtype=np.int64)
+                    if ctx_override is None:
+                        # FIFO: reconstrói ctx como em transformer.py
+                        n_sink = min(n_ctx, self.S); n_win = max(0, min(n_ctx-self.S, self.W))
+                        if n_win < self.W:
+                            win_ctx = np.arange(self.S, self.S+n_win, dtype=np.int64)
+                        else:
+                            win_ctx = (self.wbi+win_ptr+1)%self.W+self.S
+                        score_ctx = np.concatenate([self.si[:n_sink], win_ctx])
                     else:
-                        win_ctx = (self.wbi+win_ptr+1)%self.W+self.S
-                    ctx = np.concatenate([self.si[:n_sink], win_ctx])
+                        score_ctx = ctx_override
                     try:
-                        self.eviction.update_scores(ctx, at)
+                        self.eviction.update_scores(score_ctx, at)
                     except Exception:
                         pass
         xn=self._rms_norm(x[:,0,:],self.norm_w)
@@ -194,4 +200,7 @@ class MultiLayerEngine:
         xn=self._rms_norm(x[0,-1],self.norm_w)
         logits=(self.W_lm_t@xn.reshape(-1,1)).T
         new_win_ptr=(T-self.S)%self.W if T>self.S else 0
+        # Sincroniza política de evicção com o estado pós-fill (slots S..T-1 vivos, em ordem)
+        if self.eviction is not None and hasattr(self.eviction, "sync_after_fill"):
+            self.eviction.sync_after_fill(T)
         return logits,new_caches,new_win_ptr,sm0

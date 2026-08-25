@@ -344,3 +344,41 @@ Conclusão idêntica à de `ANALISE.md:11` (int8): GEMVs são kernel dominante e
 **Conclusão:** o ganho real não veio de acelerar o decode single-token (NumPy/OpenBLAS já opera no teto prático para GEMV batch-1 em CPU), e sim de (1) um segundo backend com graph fusion para quem puder pagar os 705 MB e as dependências `[onnx]`, e (2) mudar a *forma* do problema — processar o prompt como GEMM batched em vez de GEMV sequencial. Trilha encerrada sem dívida técnica conhecida: tudo opt-in, fallback automático, validação numérica documentada.
 
 Trilhas futuras possíveis (fora do escopo atual): prefill estacionário por chunks (>512 tokens), grafo ONNX batched/prefill, kernels estilo GGUF, ou execução em GPU.
+
+## 20. Trilha D — Evicção Nexus: bug de leitura encontrado e corrigido (25/08/2026)
+
+**Bug:** a implementação inicial escrevia novos tokens nos slots-vítima do anel `[4..447]`
+mas a LEITURA (`attn_step`) continuava computando `win_ctx=(wbi+win_ptr+1)%W+S` como FIFO.
+Consequências: zona protegida `[448..511]` congelava tokens velhos (nunca mais escrita),
+tokens novos churnavam no anel, e a atenção lia uma janela rotativa que não correspondia
+à recência real. Resultado: RULER 512/0.5 → fifo 0.50-0.67, nexus **0.00**.
+
+**Fix (`engine/eviction.py`, `engine/engine.py:104`, `engine/transformer.py:23`):**
+`NexusEviction.order` mantém a lista explícita de slots vivos em ordem de recência
+(fonte única para escrita E leitura); `sync_after_fill(T)` sincroniza após o prefill
+batched; `ctx_array()` alimenta `ctx_override` no `attn_step` (posições por rank,
+position freeze preservado); vítima sai só do anel `order[:W-R]`, token novo entra
+como mais recente na cauda.
+
+**Validação:** 30/30 testes verdes; invariantes `len(order)==min(n_ctx-S,W)` sem
+duplicatas através de fill+estacionária; prefill chunked FIFO diff 3.6e-07.
+
+**Comparação powered pareada** (8 prompts idênticos, in-process, 135M, ctx nominal 512 ≈ 934 toks reais, agulha depth 0.5):
+
+| Política | Acertos | Observação |
+|---|---|---|
+| FIFO | 5/8 (0.62) | garante janela dos últimos 508 |
+| **Nexus pós-fix** | **8/8 (1.00)** | reservoir ponderado por atenção |
+
+Delta pareado +0.38 (3 discordâncias, todas a favor do Nexus; McNemar exato p=0.25 —
+direção consistente, n ainda pequeno para significância). Pré-fix o mesmo Nexus fazia
+0/3 nos draws do bench — a variância entre prompts é grande; comparações com n≤3 por
+política não separam sinal de ruído neste setup.
+
+**Lição metodológica:** evicção baseada em atenção passada (EMA α=0.9) tem horizonte
+efetivo ~10 steps; retém bem tokens que atraem atenção repetida, e o reservoir com
+proteção de cauda recente manteve agulhas single-mention melhor que FIFO neste teste.
+Para veredito definitivo: ≥20 prompts pareados e depths {0.1, 0.9}.
+
+**Status trilha D:** mecânica validada, resultado preliminar favorável ao Nexus.
+Mantido opt-in (`--eviction nexus` / `LITTLE_HAWK_EVICTION=nexus`).

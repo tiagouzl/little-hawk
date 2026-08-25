@@ -47,54 +47,44 @@ class NexusEviction:
         self.scores = np.zeros(self.max_cap, dtype=np.float32)
         # contador de inserções no anel intermediário
         self.n_reservoir = 0
+        # Ordem de recência dos slots vivos (exclui sinks), mais antigo → mais novo.
+        # Fonte da verdade para LEITURA (ctx_array) e ESCrita (next_slot) — corrige a
+        # inconsistência em que win_ptr FIFO era usado para ler após escritas por override.
+        self.order: list[int] = []
+
+    def sync_after_fill(self, n_filled):
+        """Sincroniza a ordem após prefill batched (slots 0..n_filled-1 escritos sequenciais)."""
+        self.order = list(range(self.S, max(self.S, min(n_filled, self.max_cap))))
+
+    def ctx_array(self):
+        """Array completo de slots a atender: sinks + vivos em ordem de recência."""
+        import numpy as _np
+        return _np.array(list(range(self.S)) + self.order, dtype=_np.int64)
 
     def next_slot(self, n_ctx):
-        # Fase de enchimento: sequencial como FIFO
-        if n_ctx <= self.max_cap:
-            if n_ctx <= self.S:
-                return n_ctx - 1, self.win_ptr
-            # Ainda enchendo a janela — sequencial
-            if n_ctx <= self.S + self.W:
-                slot = n_ctx - 1
-                # win_ptr só avança após S
-                new_ptr = (self.win_ptr + 1) % self.W if n_ctx > self.S else self.win_ptr
-                # Para n_ctx <= max_cap, win_ptr reflete (n_ctx - S) % W como antes
-                # Mas aqui n_ctx <= max_cap então win_ptr = n_ctx - S -1? Mantém compatível:
-                # O engine calcula win_ptr externamente, aqui só retornamos slot
-                # e novo win_ptr para compatibilidade — para reservoir na fase estacionária
-                # o win_ptr é usado apenas para janela recente.
-                return slot, new_ptr
-        # Fase estacionária: n_ctx > max_cap — escolher vítima
-        # Protege R slots mais recentes (cauda da janela)
-        # Slots candidatos: S .. S+W-R-1 (anel intermediário)
-        # Vítima escolhida por reservoir ponderado inverso ao score
-        # (menor score = maior chance de evicção)
-        # Implementação simplificada: amostra ponderada onde peso = 1/(score+eps)
-        # ou score baixo = vítima.
-        # Para evitar O(W) por step em Python, usamos amostragem entre os piores k
-        # Aqui: escolhe uniformemente entre os 32 menores scores no anel
-        candidate_start = self.S
-        candidate_end = self.S + self.W - self.R
-        # Se W-R <=0, cai no FIFO da janela recente
-        if candidate_end <= candidate_start:
-            slot = self.S + self.win_ptr
+        # Fase de sinks: slots 0..S-1 sequenciais, fora da ordem de janela
+        if n_ctx <= self.S:
+            return n_ctx - 1, self.win_ptr
+        # Ainda enchendo a janela (caminho direto sem prefill): slot sequencial
+        if len(self.order) < self.W:
+            slot = self.S + len(self.order)
+            self.order.append(slot)
             return slot, (self.win_ptr + 1) % self.W
-        # Pega scores do anel intermediário
-        ring_scores = self.scores[candidate_start:candidate_end]
-        # Escolhe entre os menores — Nexus usa p ∝ atenção, nós invertemos para evicção
-        # k = min(32, len)
-        k = min(32, len(ring_scores))
-        # Índices dos k menores scores
-        idx_sorted = np.argpartition(ring_scores, k-1)[:k]
-        # Escolhe uniformemente entre eles (poderia ser ponderado por 1/score)
-        # Para determinismo com seed, usa rng
+        # Fase estacionária: vítima apenas no anel intermediário — os R slots
+        # mais recentes (cauda de self.order) NUNCA são vítimas, e todo token
+        # novo entra como mais novo na ordem (corrige o congelamento da zona protegida).
+        ring_size = self.W - self.R
+        ring = self.order[:ring_size]
+        ring_scores = self.scores[ring]
+        k = min(32, len(ring))
+        idx_sorted = np.argpartition(ring_scores, k - 1)[:k]
         chosen = self.rng.choice(idx_sorted)
-        slot = candidate_start + int(chosen)
-        # win_ptr avança apenas para janela recente (não para reservoir)
-        # Mantém win_ptr circular para os R recentes
-        new_ptr = (self.win_ptr + 1) % self.W
+        victim = int(ring[int(chosen)])
+        # Reutiliza o slot da vítima para o novo token, mas recencia-o no fim da ordem
+        self.order.remove(victim)
+        self.order.append(victim)
         self.n_reservoir += 1
-        return slot, new_ptr
+        return victim, (self.win_ptr + 1) % self.W
 
     def update_scores(self, ctx, at_weights):
         """

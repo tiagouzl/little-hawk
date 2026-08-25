@@ -1,0 +1,91 @@
+{
+  "mode": "full_sweep",
+  "config": {
+    "weights": "little_hawk_weights.npz",
+    "cli_module": "cli.main",
+    "context_lengths": [
+      512
+    ],
+    "depths": [
+      0.5
+    ],
+    "repeats": 3,
+    "min_p": 0.05,
+    "max_tokens": 8,
+    "timeout": 360,
+    "seed": 1234,
+    "mock": false,
+    "baseline_only": false,
+    "json": "ruler_512_nexus_fix.json",
+    "prompt_style": "continuation"
+  },
+  "summary": [
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "fifo": 0.6666666666666666,
+      "nexus": 0.0,
+      "delta": -0.6666666666666666
+    }
+  ],
+  "overall": {
+    "fifo": 0.6666666666666666,
+    "nexus": 0
+  },
+  "raw": [
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 197.925,
+      "peak_rss_mb": 1452.8203125,
+      "timed_out": false
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 263.277,
+      "peak_rss_mb": 1418.28515625,
+      "timed_out": false
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 135.033,
+      "peak_rss_mb": 1408.59375,
+      "timed_out": false
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 138.006,
+      "peak_rss_mb": 1413.43359375,
+      "timed_out": false
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 126.314,
+      "peak_rss_mb": 1424.3359375,
+      "timed_out": false
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 200.518,
+      "peak_rss_mb": 1422.17578125,
+      "timed_out": false
+    }
+  ]
+}
