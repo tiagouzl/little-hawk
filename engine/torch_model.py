@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
 
@@ -102,8 +102,6 @@ class LlamaLayerTorch(nn.Module):
 class LittleHawkTorch(nn.Module):
     def __init__(self, npz_path):
         super().__init__()
-        import numpy as np
-
         data = np.load(npz_path, allow_pickle=False)
         meta_path = str(npz_path).replace(".npz", "_meta.json")
         meta = json.loads(Path(meta_path).read_text())

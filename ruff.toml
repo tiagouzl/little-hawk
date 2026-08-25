@@ -1,9 +1,10 @@
 line-length = 120
 target-version = "py310"
 # Estilo compacto intencional — fora do formatador.
-# P2: utils/ promovido (867956b) — engine/runtime corrigidos (EXE001/SIM118) e
-# agora lint-clean; mantidos fora do formatador para preservar semi-colons compactos.
-# cli/transplants/examples/scripts já passam no lint, mantidos fora do formatador.
+# engine/runtime corrigidos (RUF034/PLR0402/F811) e agora lint-clean; mantidos fora do
+# formatador para preservar semi-colons compactos (verificados manualmente: `ruff check engine/ runtime/`).
+# cli/transplants/examples/scripts já passam no lint quando verificados isoladamente,
+# mantidos fora do lint/format global por legado.
 extend-exclude = [
     "engine/",
     "runtime/",

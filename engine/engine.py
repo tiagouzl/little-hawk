@@ -109,14 +109,26 @@ class MultiLayerEngine:
         new_win_ptr=(win_ptr+1)%self.W if n_ctx>self.S else win_ptr
         return logits,new_caches,new_win_ptr,sm0
     def prefill(self,tokens,caches=None):
-        """Forward batched do prompt (fase fill, len(tokens) ≤ max_cap).
+        """Forward batched do prompt.
 
-        Processa T tokens num único passo com máscara causal — reduz o TTFT
-        de T×~130 ms (step sequencial) para ~um forward GEMM. Estado final
-        (caches/win_ptr/n_ctx) é bit-a-bit equivalente ao loop de steps.
-        Retorna (logits_do_último_token, caches, win_ptr, sm0).
+        T ≤ max_cap: um único forward GEMM com máscara causal (TTFT 10-20× menor).
+        T > max_cap: chunked — primeiro max_cap batched (fill) + restante sequencial
+        via step() com cache circular/position freeze. Estado final bit-a-bit
+        equivalente ao loop de steps. Retorna (logits_do_último_token, caches, win_ptr, sm0).
         """
         ids=np.asarray(tokens,dtype=np.int64);T=int(ids.size)
+        if T==0:
+            caches=caches or self.init_cache()
+            return np.zeros((1,self.V),np.float32),caches,0,0.0
+        # Chunked para prompts maiores que a janela
+        if T>self.max_cap:
+            # Primeiro chunk batched (fill)
+            logits,caches,win_ptr,sm=self.prefill(ids[:self.max_cap],caches)
+            n_ctx=self.max_cap
+            for tid in ids[self.max_cap:]:
+                n_ctx+=1
+                logits,caches,win_ptr,sm=self.step(int(tid),caches,win_ptr,n_ctx)
+            return logits,caches,win_ptr,sm
         caches=caches or self.init_cache()
         x=self.embed[ids][np.newaxis]                      # [1,T,d]
         sm0=0.0;new_caches=[]

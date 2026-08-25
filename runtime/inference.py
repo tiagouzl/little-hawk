@@ -168,15 +168,15 @@ class LittleHawkInference:
         sampler = self.sampler if sampling_config is None else Sampler(sampling_config)
         output_tokens = []
         # Prefill batched do prompt (TTFT ~10-20× menor que step sequencial);
-        # excedente acima de max_cap continua sequencial (fase estacionária)
-        n_fill = min(len(ids), self.max_cap)
-        if n_fill > 0 and hasattr(self.engine, "prefill"):
-            lg_pre, caches, win_ptr, sm = self.engine.prefill(ids[:n_fill], caches)
-            last_logits, n_ctx = lg_pre[0], n_fill
-        for tid in ids[n_fill:]:
-            n_ctx += 1
-            logits, caches, win_ptr, sm = self.engine.step(tid, caches, win_ptr, n_ctx)
-            last_logits = logits[0]
+        # engine.prefill lida com chunked >max_cap e expõe mesma interface para ONNX
+        if len(ids) > 0 and hasattr(self.engine, "prefill"):
+            lg_pre, caches, win_ptr, sm = self.engine.prefill(ids, caches)
+            last_logits, n_ctx = lg_pre[0], len(ids)
+        else:
+            for tid in ids:
+                n_ctx += 1
+                logits, caches, win_ptr, sm = self.engine.step(tid, caches, win_ptr, n_ctx)
+                last_logits = logits[0]
         for step in range(sampling_config.max_tokens if sampling_config else 80):
             t0 = time.perf_counter()
             nid = sampler.sample(last_logits.copy(), generated=generated)

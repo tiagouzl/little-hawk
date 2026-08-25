@@ -98,6 +98,30 @@ class OnnxEngine:
         return [(np.zeros((1, self.n_heads, self.max_cap, self.d_k), np.float32),
                  np.zeros((1, self.n_heads, self.max_cap, self.d_k), np.float32)) for _ in range(self.n_layers)]
 
+    def prefill(self, tokens, caches=None):
+        """Prefill para ONNX — atualmente sequencial (grafo single-token).
+
+        Mantém interface compatível com MultiLayerEngine.prefill para que
+        runtime/inference.py possa delegar sem fallback. T>max_cap é chunked
+        automaticamente via loop de steps. O cache interno k_stack/v_stack é
+        resetado no início do prefill para equivalência com o loop NumPy.
+        """
+        ids = np.asarray(tokens, dtype=np.int64)
+        T = int(ids.size)
+        if T == 0:
+            return np.zeros((1, self.V), np.float32), self.init_cache(), 0, 0.0
+        # Sincroniza estado interno com caches frescos (equiv. a init_cache)
+        self._init_onnx_caches()
+        caches = caches or self.init_cache()
+        win_ptr = 0
+        n_ctx = 0
+        logits = None
+        sm = 0.0
+        for tid in ids:
+            n_ctx += 1
+            logits, caches, win_ptr, sm = self.step(int(tid), caches, win_ptr, n_ctx)
+        return logits, caches, win_ptr, sm
+
     def load_weights(self, path):
         # Pesos já embutidos no ONNX — apenas valida
         import json
@@ -127,7 +151,7 @@ class OnnxEngine:
         # logits já vem do ONNX [1,1,V] -> [1,V]
         logits = logits[:, 0, :] if logits.ndim == 3 else logits
         # new_win_ptr é array 0-d
-        new_win_ptr = int(new_win_ptr) if isinstance(new_win_ptr, np.ndarray) else int(new_win_ptr)
+        new_win_ptr = int(np.asarray(new_win_ptr))
         # Retorna caches dummy para compatibilidade com runtime/inference.py (que espera lista)
         # O cache real está em self.k_stack/v_stack
         return logits, caches, new_win_ptr, 0.0

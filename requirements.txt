@@ -1,3 +1,6 @@
+# Fonte da verdade: pyproject.toml — este arquivo é compat legada para Docker/CI
+# Sincronizado com [project] dependencies + [project.optional-dependencies].dev
+# Alternativa moderna: `pip install -e .[dev]`
 numpy
 safetensors
 huggingface_hub
@@ -6,4 +9,5 @@ colorama
 fastapi
 uvicorn[standard]
 pytest
+ruff
 httpx<0.28

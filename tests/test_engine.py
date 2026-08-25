@@ -203,7 +203,9 @@ class TestPrefill:
         rng = np.random.default_rng(3)
         for T in (1, 5, eng.max_cap):
             toks = rng.integers(0, eng.V, size=T).tolist()
-            caches_a = eng.init_cache(); wp_a = 0; lg_a = None
+            caches_a = eng.init_cache()
+            wp_a = 0
+            lg_a = None
             for n, t in enumerate(toks, start=1):
                 lg_a, caches_a, wp_a, _ = eng.step(t, caches_a, wp_a, n)
             lg_b, caches_b, wp_b, _ = eng.prefill(toks)
@@ -217,7 +219,9 @@ class TestPrefill:
         rng = np.random.default_rng(4)
         toks = rng.integers(0, eng.V, size=10).tolist() + [7, 7, 7]
         # tudo sequencial
-        caches_a = eng.init_cache(); wp_a = 0; lg_a = None
+        caches_a = eng.init_cache()
+        wp_a = 0
+        lg_a = None
         for n, t in enumerate(toks, start=1):
             lg_a, caches_a, wp_a, _ = eng.step(t, caches_a, wp_a, n)
         # prefill do prompt + steps na geração
@@ -229,3 +233,19 @@ class TestPrefill:
             lg_b, caches_b, wp_b, _ = eng.step(t, caches_b, wp_b, n)
         np.testing.assert_allclose(lg_b[0], lg_a[0], atol=2e-3)
         assert wp_a == wp_b
+
+    def test_prefill_chunked_beyond_max_cap(self, engine):
+        _, eng = engine
+        rng = np.random.default_rng(5)
+        T = eng.max_cap + 20  # excede janela — exercita branch chunked
+        toks = rng.integers(0, eng.V, size=T).tolist()
+        caches_a = eng.init_cache()
+        wp_a = 0
+        lg_a = None
+        for n, t in enumerate(toks, start=1):
+            lg_a, caches_a, wp_a, _ = eng.step(t, caches_a, wp_a, n)
+        lg_b, caches_b, wp_b, _ = eng.prefill(toks)
+        np.testing.assert_allclose(lg_b[0], lg_a[0], atol=2e-3)
+        assert wp_a == wp_b
+        d_k = max(np.abs(caches_a[i][0] - caches_b[i][0]).max() for i in range(eng.n_layers))
+        assert d_k < 2e-4

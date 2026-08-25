@@ -11,6 +11,13 @@ cai no modo demo (pesos aleatórios).
 Concorrência: um semáforo limita gerações simultâneas (LITTLE_HAWK_MAX_CONCURRENCY,
 padrão 2). Desconexão do cliente cancela a inferência de forma cooperativa.
 Cada requisição usa RNG própria — resultados não interferem entre si.
+
+Limitação de escopo (intencional, educacional):
+- Modelo é estado global single-process (`_hawk`/`_tok` carregados uma vez no lifespan).
+  Não há sharding, replicação ou auth/rate-limit — é demo, não produção.
+- O semáforo + timeout (`LITTLE_HAWK_TIMEOUT_SECS`) são os únicos controles
+  operacionais; escalar horizontalmente requer múltiplos processos/containers
+  com balanceador externo.
 """
 
 import asyncio
@@ -33,10 +40,11 @@ MAX_CONCURRENCY = int(os.getenv("LITTLE_HAWK_MAX_CONCURRENCY", "2"))
 TIMEOUT_SECS = float(os.getenv("LITTLE_HAWK_TIMEOUT_SECS", "300"))
 DEFAULT_WEIGHTS = os.getenv("LITTLE_HAWK_WEIGHTS", "little_hawk_weights.npz")
 
-# Modelo carregado uma vez por processo
+# Modelo carregado uma vez por processo (single-process, escopo educacional — ver docstring)
 _hawk = None
 _tok = None
 _gen_semaphore: asyncio.Semaphore | None = None
+_load_lock = threading.Lock()
 
 
 def _ensure_semaphore() -> asyncio.Semaphore:
@@ -61,34 +69,42 @@ class ClientDisconnected(Exception):
 
 
 def load_model(weights_path: str | None = None):
-    """Carrega tokenizer/engine. Fallback para modo demo se pesos ausentes."""
+    """Carrega tokenizer/engine. Fallback para modo demo se pesos ausentes.
+
+    Thread-safe via _load_lock — evita corrida no lifespan + primeira requisição.
+    Estado global single-process é intencional (demo); para produção use múltiplos
+    workers/containers com balanceador externo.
+    """
     global _hawk, _tok
     if _hawk is not None:
         return
-    tok = BPETokenizer()
-    if weights_path and os.path.exists(weights_path):
-        meta = weights_path.replace(".npz", "_meta.json")
-        if not os.path.exists(meta):
-            raise FileNotFoundError(f"Meta não encontrado: {meta}")
-        tok.load_donor_vocab(meta)
-        with open(meta, encoding="utf-8") as f:
-            m = json.load(f)
-        eng = MultiLayerEngine(
-            d_model=int(m.get("d_model", 576)),
-            n_heads=int(m.get("n_heads", 9)),
-            n_layers=int(m.get("n_layers", 30)),
-            sink_size=4,
-            window_size=508,
-            vocab_size=int(m.get("vocab_size", len(tok.vocab))),
-        )
-        eng.load_weights(weights_path)
-    else:
-        tok.train(CORPUS, vocab_size=512, verbose=False)
-        eng = MultiLayerEngine(
-            d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=len(tok.vocab)
-        )
-    _tok = tok
-    _hawk = LittleHawkInference(tokenizer=tok, engine=eng)
+    with _load_lock:
+        if _hawk is not None:  # double-checked após adquirir lock
+            return
+        tok = BPETokenizer()
+        if weights_path and os.path.exists(weights_path):
+            meta = weights_path.replace(".npz", "_meta.json")
+            if not os.path.exists(meta):
+                raise FileNotFoundError(f"Meta não encontrado: {meta}")
+            tok.load_donor_vocab(meta)
+            with open(meta, encoding="utf-8") as f:
+                m = json.load(f)
+            eng = MultiLayerEngine(
+                d_model=int(m.get("d_model", 576)),
+                n_heads=int(m.get("n_heads", 9)),
+                n_layers=int(m.get("n_layers", 30)),
+                sink_size=4,
+                window_size=508,
+                vocab_size=int(m.get("vocab_size", len(tok.vocab))),
+            )
+            eng.load_weights(weights_path)
+        else:
+            tok.train(CORPUS, vocab_size=512, verbose=False)
+            eng = MultiLayerEngine(
+                d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=len(tok.vocab)
+            )
+        _tok = tok
+        _hawk = LittleHawkInference(tokenizer=tok, engine=eng)
 
 
 def _blocking_stream(
