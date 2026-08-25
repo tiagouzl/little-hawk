@@ -382,3 +382,45 @@ Para veredito definitivo: ≥20 prompts pareados e depths {0.1, 0.9}.
 
 **Status trilha D:** mecânica validada, resultado preliminar favorável ao Nexus.
 Mantido opt-in (`--eviction nexus` / `LITTLE_HAWK_EVICTION=nexus`).
+
+### 20.1 Sweep powered pareado — veredito final da trilha D (25/08/2026)
+
+Correção ao resultado preliminar do §20. O sweep pareado completo (`bench_ruler_eviction.py`,
+desenho pareado real: mesmo prompt sob ambas as evicções + McNemar exato embutido) foi
+executado com subprocess limpo (estado fresco por trial): **21 prompts, ctx 512 (~934 toks
+reais), seed 42, 7 reps/depth**.
+
+| depth | fifo | nexus | b/c (fifo-only/nexus-only) | p (McNemar) |
+|---|---|---|---|---|
+| 0.10 | 0.00 | 0.00 | 0/0 | — |
+| 0.50 | **0.57** | **0.00** | **4/0** | 0.125 |
+| 0.90 | 0.86 | 0.86 | 1/1 | 1.000 |
+| TOTAL | 0.48 | 0.29 | 5/1 | 0.219 |
+
+**Leitura por profundidade (mecanismo confirma os números):**
+- **0.10**: agulha em pos ~93/934 → fora da janela FIFO e cedo no anel Nexus com EMA→0.
+  Ambos perdem sempre — nenhum sinal possível.
+- **0.50**: agulha em pos ~467, escrita no fill, entra no anel do Nexus após ~19 steps
+  seguintes com score EMA decaído → vítima garantida. FIFO garante retenção até pos 975
+  (não alcançada). As 4 discordâncias vão todas para o FIFO.
+- **0.90**: agulha em pos ~840, apenas ~94 tokens depois → majoritariamente na cauda
+  protegida dos dois esquemas → paridade alta (6/7 cada).
+
+**Correção ao §20:** o "8/8 vs 5/8" preliminar era contaminado — `scores` por slot-id
+persistiam entre chamadas `generate()` no mesmo processo, e agulhas herdavam proteção
+acumulada por tokens de trials anteriores. Fix: `NexusEviction.reset()` chamado em
+`init_cache()` (`engine/engine.py:100`) — estado zero a cada geração.
+
+**Veredito final da trilha D:**
+1. Para needle-single-mention (classe RULER/NIAH), **FIFO é estruturalmente superior**:
+   atenção passada mede relevância ao step atual, não utilidade futura; EMA descarta
+   tokens importantes silenciosos. O mecanismo e os dados (4/0 discordâncias) convergem.
+2. Nexus pós-fix é **correto mecanicamente** (ordem consistente, reset entre gerações)
+   e paridade com FIFO nas profundidades extremas — mas não há classe de tarefa testada
+   onde supere FIFO. Mantido opt-in como plataforma experimental (reservoir ponderado),
+   não como default.
+3. Próximo passo só faz sentido com scoring de utilidade-futura (ex.: proteção por
+   surpresa/perplexity local), que é redesign, não tuning.
+
+Critério do projeto aplicado consistentemente (int8, Cython, scipy, ONNX-contrib):
+resultado negativo documentado é resultado.

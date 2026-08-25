@@ -99,6 +99,9 @@ class MultiLayerEngine:
           # Removido print direto para manter núcleo limpo
     def init_cache(self):
         sh=(1,self.n_heads,self.max_cap,self.d_k)
+        # Política de evicção reseta junto — evita contaminação entre gerações
+        if self.eviction is not None and hasattr(self.eviction, "reset"):
+            self.eviction.reset()
         return [(np.zeros(sh,np.float32),np.zeros(sh,np.float32)) for _ in range(self.n_layers)]
     _rms_norm = staticmethod(LlamaLayer._rms_norm)
     def step(self,token_id,caches,win_ptr,n_ctx):

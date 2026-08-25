@@ -56,6 +56,14 @@ class NexusEviction:
         """Sincroniza a ordem após prefill batched (slots 0..n_filled-1 escritos sequenciais)."""
         self.order = list(range(self.S, max(self.S, min(n_filled, self.max_cap))))
 
+    def reset(self):
+        """Zera estado entre gerações — scores são por slot-id e sem reset uma
+        geração herda a proteção acumulada pelos tokens da geração anterior."""
+        self.order = []
+        self.scores = np.zeros(self.max_cap, dtype=np.float32)
+        self.n_reservoir = 0
+        self.win_ptr = 0
+
     def ctx_array(self):
         """Array completo de slots a atender: sinks + vivos em ordem de recência."""
         import numpy as _np
