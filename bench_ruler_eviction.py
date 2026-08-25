@@ -310,7 +310,7 @@ def paired_breakdown(results: list[TrialResult], mode_a: str, mode_b: str, group
         by_trial.setdefault(r.trial_id, {})[r.eviction] = r
 
     groups: dict = {}
-    for tid, per_mode in by_trial.items():
+    for per_mode in by_trial.values():
         if mode_a not in per_mode or mode_b not in per_mode:
             continue
         key = group_key(per_mode[mode_a])
