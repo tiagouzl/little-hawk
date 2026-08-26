@@ -485,3 +485,43 @@ surpresa (Memorizing Transformers e afins).
 Falsificado se: ganho não aparecer em 0.5, ou aparecer regressão em 0.1/0.9.
 Protocolo idêntico ao §20.1: 21 prompts pareados (seed 42), 3 políticas,
 McNemar exato por profundidade.
+
+### 20.4 Resultado do sweep triplo — hipótese confirmada com superação em H3 (26/08/2026)
+
+Sweep pareado executado conforme §20.3 (21 prompts, seed 42, subprocess limpo,
+3 políticas × 7 reps × 3 profundidades, 63 trials):
+
+| depth | fifo | nexus | nexus-salience | b/c sal·vs·fifo | p (McNemar) |
+|---|---|---|---|---|---|
+| 0.10 | 0.00 | 0.00 | **1.00** | 0/7 | **0.016*** |
+| 0.50 | 0.71 | 0.00 | 0.86 | 0/1 | 1.000 (n baixo) |
+| 0.90 | 0.86 | 0.86 | 1.00 | 0/1 | 1.000 (n baixo) |
+| TOTAL | 0.52 | 0.29 | **0.95** | 0/9 | **0.004*** |
+
+**Veredicto das hipóteses:**
+- **H1 (ganho em 0.5): confirmada direção, não significância isolada** (+0.14, só 1
+  discordância — fifo já retém por janela de recência nesse depth).
+- **H2 (paridade em 0.9): superada** (1.00 vs 0.86).
+- **H3 FALSIFICADA NO MELHOR SENTIDO**: em 0.1 o ganho não foi paridade — foi
+  **dominância estrita 7/0 com p=0.016**. A premissa "irrecuperável por qualquer
+  política" estava errada: irrecuperável para políticas de RECÊNCIA; o piso de
+  surpresa protege a agulha no anel independente de posição.
+
+**O dado central:** nas 9 discordâncias pareadas fifo×salience, **zero foram contra
+o salience** (p=0.004). Salience nunca perdeu um prompt pareado para FIFO.
+
+**Interpretação mecânica:** FIFO cobre posições [final-508, final] — agulhas mais
+fundo são estruturalmente perdidas. O piso de surpresa desacopla proteção de
+posição: token estatisticamente improvável sobrevive onde estiver. O ganho se
+concentra exatamente onde recência não alcança (0.1) — o oposto da predição
+ingênua, e mais valioso.
+
+**Caveats honestos:** 1 seed-set (42), 1 checkpoint (135M), 1 formato de agulha
+(número aleatório = caso ideal para surpresa); pesos (w_sal=0.15) não varridos;
+thermal throttling visível nos tempos (100→334s/trial). Generalização exige
+variar seed/checkpoint/formatos (nomes próprios, datas) — datas/nomes banais
+devem comprimir o ganho pela limitação documentada em §20.3.
+
+**Status:** `--eviction nexus-salience` promovido a experimental recomendado para
+tarefas recall-heavy com fatos raros; FIFO permanece default (custo zero, sem
+hiperparâmetros, comportamento garantido).

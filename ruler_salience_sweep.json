@@ -1,0 +1,819 @@
+{
+  "mode": "full_sweep",
+  "config": {
+    "weights": "little_hawk_weights.npz",
+    "cli_module": "cli.main",
+    "context_lengths": [
+      512
+    ],
+    "depths": [
+      0.1,
+      0.5,
+      0.9
+    ],
+    "repeats": 7,
+    "min_p": 0.05,
+    "max_tokens": 8,
+    "timeout": 360,
+    "seed": 42,
+    "mock": false,
+    "baseline_only": false,
+    "json": "ruler_salience_sweep.json",
+    "prompt_style": "continuation",
+    "modes": "fifo,nexus,nexus-salience"
+  },
+  "summary": [
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "fifo": 0.0,
+      "nexus": 0.0,
+      "nexus-salience": 1.0
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "fifo": 0.7142857142857143,
+      "nexus": 0.0,
+      "nexus-salience": 0.8571428571428571
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "fifo": 0.8571428571428571,
+      "nexus": 0.8571428571428571,
+      "nexus-salience": 1.0
+    }
+  ],
+  "overall": {
+    "fifo": 0.5238095238095238,
+    "nexus": 0.2857142857142857,
+    "nexus-salience": 0.9523809523809523
+  },
+  "paired_mcnemar": {
+    "fifo_vs_nexus": {
+      "by_depth": {
+        "0.1": {
+          "n": 7,
+          "a_correct": 0,
+          "b_correct": 0,
+          "b_only": 0,
+          "c_only": 0,
+          "acc_a": 0.0,
+          "acc_b": 0.0,
+          "mcnemar_p": 1.0
+        },
+        "0.5": {
+          "n": 7,
+          "a_correct": 5,
+          "b_correct": 0,
+          "b_only": 5,
+          "c_only": 0,
+          "acc_a": 0.7142857142857143,
+          "acc_b": 0.0,
+          "mcnemar_p": 0.0625
+        },
+        "0.9": {
+          "n": 7,
+          "a_correct": 6,
+          "b_correct": 6,
+          "b_only": 0,
+          "c_only": 0,
+          "acc_a": 0.8571428571428571,
+          "acc_b": 0.8571428571428571,
+          "mcnemar_p": 1.0
+        }
+      },
+      "overall": {
+        "n": 21,
+        "a_correct": 11,
+        "b_correct": 6,
+        "b_only": 5,
+        "c_only": 0,
+        "acc_a": 0.5238095238095238,
+        "acc_b": 0.2857142857142857,
+        "mcnemar_p": 0.0625
+      }
+    },
+    "fifo_vs_nexus-salience": {
+      "by_depth": {
+        "0.1": {
+          "n": 7,
+          "a_correct": 0,
+          "b_correct": 7,
+          "b_only": 0,
+          "c_only": 7,
+          "acc_a": 0.0,
+          "acc_b": 1.0,
+          "mcnemar_p": 0.015625
+        },
+        "0.5": {
+          "n": 7,
+          "a_correct": 5,
+          "b_correct": 6,
+          "b_only": 0,
+          "c_only": 1,
+          "acc_a": 0.7142857142857143,
+          "acc_b": 0.8571428571428571,
+          "mcnemar_p": 1.0
+        },
+        "0.9": {
+          "n": 7,
+          "a_correct": 6,
+          "b_correct": 7,
+          "b_only": 0,
+          "c_only": 1,
+          "acc_a": 0.8571428571428571,
+          "acc_b": 1.0,
+          "mcnemar_p": 1.0
+        }
+      },
+      "overall": {
+        "n": 21,
+        "a_correct": 11,
+        "b_correct": 20,
+        "b_only": 0,
+        "c_only": 9,
+        "acc_a": 0.5238095238095238,
+        "acc_b": 0.9523809523809523,
+        "mcnemar_p": 0.00390625
+      }
+    },
+    "nexus_vs_nexus-salience": {
+      "by_depth": {
+        "0.1": {
+          "n": 7,
+          "a_correct": 0,
+          "b_correct": 7,
+          "b_only": 0,
+          "c_only": 7,
+          "acc_a": 0.0,
+          "acc_b": 1.0,
+          "mcnemar_p": 0.015625
+        },
+        "0.5": {
+          "n": 7,
+          "a_correct": 0,
+          "b_correct": 6,
+          "b_only": 0,
+          "c_only": 6,
+          "acc_a": 0.0,
+          "acc_b": 0.8571428571428571,
+          "mcnemar_p": 0.03125
+        },
+        "0.9": {
+          "n": 7,
+          "a_correct": 6,
+          "b_correct": 7,
+          "b_only": 0,
+          "c_only": 1,
+          "acc_a": 0.8571428571428571,
+          "acc_b": 1.0,
+          "mcnemar_p": 1.0
+        }
+      },
+      "overall": {
+        "n": 21,
+        "a_correct": 6,
+        "b_correct": 20,
+        "b_only": 0,
+        "c_only": 14,
+        "acc_a": 0.2857142857142857,
+        "acc_b": 0.9523809523809523,
+        "mcnemar_p": 0.0001220703125
+      }
+    }
+  },
+  "raw": [
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 105.69,
+      "peak_rss_mb": 1482.74609375,
+      "timed_out": false,
+      "trial_id": 1
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 136.033,
+      "peak_rss_mb": 1457.25390625,
+      "timed_out": false,
+      "trial_id": 1
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 134.326,
+      "peak_rss_mb": 1435.55859375,
+      "timed_out": false,
+      "trial_id": 1
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 130.258,
+      "peak_rss_mb": 1438.05859375,
+      "timed_out": false,
+      "trial_id": 2
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 129.355,
+      "peak_rss_mb": 1438.828125,
+      "timed_out": false,
+      "trial_id": 2
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 133.793,
+      "peak_rss_mb": 1458.6796875,
+      "timed_out": false,
+      "trial_id": 2
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 127.752,
+      "peak_rss_mb": 1446.5234375,
+      "timed_out": false,
+      "trial_id": 3
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 131.537,
+      "peak_rss_mb": 1456.1171875,
+      "timed_out": false,
+      "trial_id": 3
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 125.733,
+      "peak_rss_mb": 1422.7578125,
+      "timed_out": false,
+      "trial_id": 3
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 100.318,
+      "peak_rss_mb": 1461.89453125,
+      "timed_out": false,
+      "trial_id": 4
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 101.071,
+      "peak_rss_mb": 1465.37890625,
+      "timed_out": false,
+      "trial_id": 4
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 127.589,
+      "peak_rss_mb": 1449.0234375,
+      "timed_out": false,
+      "trial_id": 4
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 134.807,
+      "peak_rss_mb": 1475.515625,
+      "timed_out": false,
+      "trial_id": 5
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 143.633,
+      "peak_rss_mb": 1469.60546875,
+      "timed_out": false,
+      "trial_id": 5
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 137.646,
+      "peak_rss_mb": 1462.03125,
+      "timed_out": false,
+      "trial_id": 5
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 133.121,
+      "peak_rss_mb": 1446.484375,
+      "timed_out": false,
+      "trial_id": 6
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 152.48,
+      "peak_rss_mb": 1463.08203125,
+      "timed_out": false,
+      "trial_id": 6
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 173.126,
+      "peak_rss_mb": 1486.015625,
+      "timed_out": false,
+      "trial_id": 6
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 107.486,
+      "peak_rss_mb": 1377.93359375,
+      "timed_out": false,
+      "trial_id": 7
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 177.703,
+      "peak_rss_mb": 1428.6640625,
+      "timed_out": false,
+      "trial_id": 7
+    },
+    {
+      "context_length": 512,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 144.516,
+      "peak_rss_mb": 1445.93359375,
+      "timed_out": false,
+      "trial_id": 7
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 149.437,
+      "peak_rss_mb": 1447.734375,
+      "timed_out": false,
+      "trial_id": 8
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 134.884,
+      "peak_rss_mb": 1409.07421875,
+      "timed_out": false,
+      "trial_id": 8
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 134.399,
+      "peak_rss_mb": 1470.58203125,
+      "timed_out": false,
+      "trial_id": 8
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 133.017,
+      "peak_rss_mb": 1470.50390625,
+      "timed_out": false,
+      "trial_id": 9
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 137.251,
+      "peak_rss_mb": 1434.01953125,
+      "timed_out": false,
+      "trial_id": 9
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 137.506,
+      "peak_rss_mb": 1434.5625,
+      "timed_out": false,
+      "trial_id": 9
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 134.074,
+      "peak_rss_mb": 1446.53515625,
+      "timed_out": false,
+      "trial_id": 10
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 158.345,
+      "peak_rss_mb": 1473.25,
+      "timed_out": false,
+      "trial_id": 10
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 177.558,
+      "peak_rss_mb": 1461.91015625,
+      "timed_out": false,
+      "trial_id": 10
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 283.136,
+      "peak_rss_mb": 1438.41796875,
+      "timed_out": false,
+      "trial_id": 11
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 222.241,
+      "peak_rss_mb": 1429.66796875,
+      "timed_out": false,
+      "trial_id": 11
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus-salience",
+      "correct": false,
+      "wall_s": 252.242,
+      "peak_rss_mb": 1426.62109375,
+      "timed_out": false,
+      "trial_id": 11
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 253.678,
+      "peak_rss_mb": 1411.7265625,
+      "timed_out": false,
+      "trial_id": 12
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 245.203,
+      "peak_rss_mb": 1446.0546875,
+      "timed_out": false,
+      "trial_id": 12
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 261.933,
+      "peak_rss_mb": 1479.71484375,
+      "timed_out": false,
+      "trial_id": 12
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 267.139,
+      "peak_rss_mb": 1466.359375,
+      "timed_out": false,
+      "trial_id": 13
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 281.237,
+      "peak_rss_mb": 1429.2109375,
+      "timed_out": false,
+      "trial_id": 13
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 334.134,
+      "peak_rss_mb": 1461.58203125,
+      "timed_out": false,
+      "trial_id": 13
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 197.642,
+      "peak_rss_mb": 1474.43359375,
+      "timed_out": false,
+      "trial_id": 14
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 147.194,
+      "peak_rss_mb": 1397.86328125,
+      "timed_out": false,
+      "trial_id": 14
+    },
+    {
+      "context_length": 512,
+      "depth": 0.5,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 161.396,
+      "peak_rss_mb": 1467.66796875,
+      "timed_out": false,
+      "trial_id": 14
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 188.262,
+      "peak_rss_mb": 1453.15625,
+      "timed_out": false,
+      "trial_id": 15
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus",
+      "correct": false,
+      "wall_s": 184.806,
+      "peak_rss_mb": 1445.43359375,
+      "timed_out": false,
+      "trial_id": 15
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 170.817,
+      "peak_rss_mb": 1443.59375,
+      "timed_out": false,
+      "trial_id": 15
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 202.218,
+      "peak_rss_mb": 1449.6171875,
+      "timed_out": false,
+      "trial_id": 16
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus",
+      "correct": true,
+      "wall_s": 183.369,
+      "peak_rss_mb": 1476.89453125,
+      "timed_out": false,
+      "trial_id": 16
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 162.73,
+      "peak_rss_mb": 1448.66015625,
+      "timed_out": false,
+      "trial_id": 16
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 165.771,
+      "peak_rss_mb": 1438.53125,
+      "timed_out": false,
+      "trial_id": 17
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus",
+      "correct": true,
+      "wall_s": 210.712,
+      "peak_rss_mb": 1452.03515625,
+      "timed_out": false,
+      "trial_id": 17
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 232.043,
+      "peak_rss_mb": 1445.53515625,
+      "timed_out": false,
+      "trial_id": 17
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 257.146,
+      "peak_rss_mb": 1417.94921875,
+      "timed_out": false,
+      "trial_id": 18
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus",
+      "correct": true,
+      "wall_s": 256.523,
+      "peak_rss_mb": 1483.30078125,
+      "timed_out": false,
+      "trial_id": 18
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 211.752,
+      "peak_rss_mb": 1452.20703125,
+      "timed_out": false,
+      "trial_id": 18
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 209.409,
+      "peak_rss_mb": 1472.8125,
+      "timed_out": false,
+      "trial_id": 19
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus",
+      "correct": true,
+      "wall_s": 229.341,
+      "peak_rss_mb": 1449.2109375,
+      "timed_out": false,
+      "trial_id": 19
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 231.268,
+      "peak_rss_mb": 1481.20703125,
+      "timed_out": false,
+      "trial_id": 19
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 232.288,
+      "peak_rss_mb": 1480.49609375,
+      "timed_out": false,
+      "trial_id": 20
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus",
+      "correct": true,
+      "wall_s": 213.366,
+      "peak_rss_mb": 1475.6171875,
+      "timed_out": false,
+      "trial_id": 20
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 230.832,
+      "peak_rss_mb": 1427.328125,
+      "timed_out": false,
+      "trial_id": 20
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "fifo",
+      "correct": true,
+      "wall_s": 209.342,
+      "peak_rss_mb": 1445.41015625,
+      "timed_out": false,
+      "trial_id": 21
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus",
+      "correct": true,
+      "wall_s": 218.869,
+      "peak_rss_mb": 1475.078125,
+      "timed_out": false,
+      "trial_id": 21
+    },
+    {
+      "context_length": 512,
+      "depth": 0.9,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 233.821,
+      "peak_rss_mb": 1430.97265625,
+      "timed_out": false,
+      "trial_id": 21
+    }
+  ]
+}
