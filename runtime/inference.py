@@ -7,6 +7,7 @@ import numpy as np
 from typing import Optional, Callable, List, Any, Dict
 from dataclasses import dataclass
 from runtime.tokenizer import StreamDecoder
+from engine.speculative import can_verify, verify_chunk
 
 try:
     from utils import RESET, BOLD, DIM, CYAN, GREEN, YELLOW, MAGENTA, RED, WHITE
@@ -152,12 +153,20 @@ class LittleHawkInference:
         telemetry: Telemetry | None = None,
         on_token: Callable[[str, int, dict[str, Any]], None] | None = None,
         panel: bool = True,
+        speculative_k: int = 0,
     ) -> str:
         """
         Gera texto autoregressivo a partir do prompt.
         - Não faz prints diretos (usa Telemetry ou callback)
         - Pode ser usado em API, CLI, etc
+        - speculative_k > 0 ativa N-gram speculative decoding greedy (Fase B)
         """
+        if speculative_k and hasattr(self.engine, "verify_chunk"):
+            from engine.speculative import can_verify
+            if can_verify(self.engine, self.max_cap + 1, speculative_k):
+                return self._generate_speculative(
+                    prompt, sampling_config, on_token, speculative_k
+                )
         caches = self.engine.init_cache()
         win_ptr = 0
         sdec = StreamDecoder(self.tok)
@@ -213,3 +222,156 @@ class LittleHawkInference:
             }
             telemetry.on_finish(result, stats)
         return result
+
+    def _generate_speculative(self, prompt, cfg, on_token, k: int) -> str:
+        """Fase B — greedy N-gram speculative decoding (ANALISE §21.2).
+
+        Contrato: 2 forwards do alvo por rodada (verify + step bônus), m+1
+        tokens emitidos. Rollback por restauração dos slots rejeitados.
+        Sampler consultado apenas para o token bônus — rascunhos são
+        aceitos/rejeitados por argmax do alvo.
+        """
+        from runtime.speculative import NGramSpeculator, SpeculativeStats, restore_slot
+
+        eng = self.engine
+        stats = SpeculativeStats()
+        caches = eng.init_cache()
+        win_ptr = 0
+        sdec = StreamDecoder(self.tok)
+        ids = self.tok.encode(prompt, add_bos=True)
+        all_ids = list(ids)
+        generated = [t for t in ids if t not in (self.tok.bos_id, self.tok.eos_id)]
+        spec = NGramSpeculator(n=3)
+        # semeia a tabela com todos os trigramas do prompt — sem isso a
+        # primeira rodada nunca teria hits (bug pego por teste fraco que
+        # aceitava rounds=0 silenciosamente)
+        for i in range(len(ids) - spec.n + 1):
+            spec.observe(ids[i:i + spec.n])
+        ev = 0; lat = 0.0; sm = 0.0; ts = ""
+        sampler = self.sampler
+        max_tokens = cfg.max_tokens if cfg else 80
+        n_ctx = 0
+        t_start = time.perf_counter()
+
+        def feed_and_emit(nid):
+            nonlocal lat, ts, ev
+            decoded = sdec.push(nid)
+            if on_token:
+                on_token(decoded, stats.emitted, {"latency": lat, "step": stats.emitted, "token_id": nid})
+
+        # prefill compartilhado com caminho normal
+        lg, caches, win_ptr, sm = eng.prefill(ids, caches)
+        prev_logits = lg[0]
+        n_ctx = len(ids)
+        stats.forwards += 1
+
+        speculative_mode = True
+        emitted_count = 0
+        stopped = False
+        while emitted_count < max_tokens and not stopped:
+            if not can_verify(eng, n_ctx, k):
+                speculative_mode = False
+                break
+            drafts = spec.propose(all_ids, k)
+            if not drafts:
+                speculative_mode = False
+                break
+            kd = len(drafts)
+            stats.rounds += 1
+            stats.proposed += kd
+            cand_slots = (win_ptr + np.arange(kd, dtype=np.int64)) % eng.W + eng.S
+            snap = [
+                (caches[li][0][:, :, cand_slots, :].copy(),
+                 caches[li][1][:, :, cand_slots, :].copy())
+                for li in range(eng.n_layers)
+            ]
+            t0 = time.perf_counter()
+            lg_all, caches, _, _ = verify_chunk(eng, drafts, caches, win_ptr, n_ctx)
+            stats.forwards += 1
+            lat = (time.perf_counter() - t0) * 1000
+
+            # aceitação greedy contra logits prévios e intermediários
+            m = 0
+            cur = prev_logits
+            for j, d in enumerate(drafts):
+                if int(np.argmax(cur)) != d:
+                    break
+                m += 1
+                cur = lg_all[j]
+            stats.accepted += m
+
+            for j in range(m, kd):                       # rollback sufixo rejeitado
+                for li in range(eng.n_layers):
+                    kc_snap, vc_snap = snap[li]
+                    caches[li][0][:, :, cand_slots[j]:cand_slots[j] + 1, :] = \
+                        kc_snap[:, :, j:j + 1, :]
+                    caches[li][1][:, :, cand_slots[j]:cand_slots[j] + 1, :] = \
+                        vc_snap[:, :, j:j + 1, :]
+                stats.rollback_restores += 1
+            win_ptr = (win_ptr + m) % eng.W
+            n_ctx += m
+            for j in range(m):
+                nid = drafts[j]
+                generated.append(nid); all_ids.append(nid)
+                spec.observe(all_ids[-spec.n:])
+                emit_fn = sdec.push(nid)
+                if on_token:
+                    on_token(emit_fn, stats.emitted,
+                             {"latency": lat, "step": stats.emitted, "token_id": nid})
+                stats.emitted += 1; emitted_count += 1
+                if n_ctx > eng.max_cap:
+                    ev += 1
+                if nid == self.tok.eos_id:
+                    stopped = True
+                    break
+
+            if stopped or emitted_count >= max_tokens:
+                break
+            # token bônus: o alvo assume no ponto de parada
+            t0 = time.perf_counter()
+            nid = sampler.sample(cur.copy(), generated=generated)
+            n_ctx += 1
+            lg_b, caches, win_ptr, sm = eng.step(nid, caches, win_ptr, n_ctx)
+            prev_logits = lg_b[0]
+            stats.forwards += 1
+            lat = (time.perf_counter() - t0) * 1000
+            ts = self.tok.id_to_token.get(nid, self.tok.UNK).replace("Ġ", " ").replace("Ċ", "↵")
+            if n_ctx > eng.max_cap:
+                ev += 1
+            if nid == self.tok.eos_id:
+                stopped = True
+                break
+            generated.append(nid); all_ids.append(nid)
+            spec.observe(all_ids[-spec.n:])
+            dec = sdec.push(nid)
+            if on_token:
+                on_token(dec, stats.emitted,
+                         {"latency": lat, "step": stats.emitted, "token_id": nid})
+            stats.emitted += 1; emitted_count += 1
+
+        # cauda sequencial (fallback ou complemento até max_tokens)
+        while emitted_count < max_tokens and not stopped:
+            stats.fallback_steps += 1
+            t0 = time.perf_counter()
+            nid = sampler.sample(prev_logits.copy(), generated=generated)
+            n_ctx += 1
+            lg, caches, win_ptr, sm = eng.step(nid, caches, win_ptr, n_ctx)
+            prev_logits = lg[0]
+            stats.forwards += 1
+            lat = (time.perf_counter() - t0) * 1000
+            ts = self.tok.id_to_token.get(nid, self.tok.UNK).replace("Ġ", " ").replace("Ċ", "↵")
+            if n_ctx > eng.max_cap:
+                ev += 1
+            if nid == self.tok.eos_id:
+                break
+            generated.append(nid); all_ids.append(nid)
+            spec.observe(all_ids[-spec.n:])
+            dec = sdec.push(nid)
+            if on_token:
+                on_token(dec, stats.emitted,
+                         {"latency": lat, "step": stats.emitted, "token_id": nid})
+            stats.emitted += 1; emitted_count += 1
+
+        sdec.flush()
+        stats.wall_s = time.perf_counter() - t_start
+        return self.tok.decode(generated), stats

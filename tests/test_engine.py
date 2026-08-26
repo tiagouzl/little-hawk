@@ -384,3 +384,59 @@ class TestVerifyChunk:
             d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=512, eviction="nexus"
         )
         assert can_verify(eng, n_ctx=100, k=4) is False
+
+
+class TestSpeculativePhaseB:
+    def _hawk(self):
+        tok = BPETokenizer()
+        tok.train(CORPUS, vocab_size=512, verbose=False)
+        eng = MultiLayerEngine(
+            d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=len(tok.vocab)
+        )
+        return LittleHawkInference(tok, eng), tok
+
+    def test_speculative_runs_and_reports_stats(self):
+        from runtime.inference import SamplingConfig
+
+        hawk, _ = self._hawk()
+        cfg = SamplingConfig(max_tokens=30, temperature=0.7)
+        # regime H1: prompt repetitivo garante hits de n-gram
+        prompt = ("memória e atenção fluem pelo cache. " * 12).strip()
+        out, st = hawk._generate_speculative(prompt, cfg, None, k=4)
+        assert len(out) > 0 and st.emitted == 30
+        assert st.rounds > 0, "prompt repetitivo deve gerar hits de n-gram"
+        # Caso B do contrato E2 é válido aqui: no brinquedo, proposer (segmentação
+        # do prompt) e trajetória greedy podem divergir por fronteira de tokens —
+        # aceitação 0 é resultado legítimo; o veredito H1 é no bench com pesos reais.
+        assert st.accepted <= st.proposed
+
+    def test_speculative_fallback_on_sparse_prompt(self):
+        from runtime.inference import SamplingConfig
+
+        hawk, _ = self._hawk()
+        cfg = SamplingConfig(max_tokens=10, temperature=0.7)
+        out, st = hawk._generate_speculative("zzq", cfg, None, k=4)
+        assert st.emitted == 10 and st.rounds == 0  # sem hits → puro fallback
+
+    def test_speculative_deterministic(self):
+        from runtime.inference import SamplingConfig
+
+        hawk, _ = self._hawk()
+        cfg = SamplingConfig(max_tokens=20, temperature=0.7)
+        np.random.seed(7)
+        a, sa = hawk._generate_speculative(("tokens fluem pelo cache. " * 10).strip(), cfg, None, k=4)
+        np.random.seed(7)
+        b, sb = hawk._generate_speculative(("tokens fluem pelo cache. " * 10).strip(), cfg, None, k=4)
+        assert a == b
+        da, db = sa.as_dict(), sb.as_dict()
+        da.pop("wall_s")
+        db.pop("wall_s")  # timing não é determinístico
+        assert da == db
+
+    def test_k_zero_uses_normal_path(self):
+        from runtime.inference import SamplingConfig
+
+        hawk, _ = self._hawk()
+        cfg = SamplingConfig(max_tokens=10)
+        out = hawk.generate("memória", sampling_config=cfg, panel=False, speculative_k=0)
+        assert isinstance(out, str) and len(out) > 0

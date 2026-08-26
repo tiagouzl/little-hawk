@@ -587,3 +587,40 @@ Desacoplado do Sampler (greedy não o consulta).
 Falsificação: speedup <1.15× em H1 ⇒ mecanismo não paga overhead neste hardware
 → documentar e encerrar trilha (mesmo critério int8/Cython). Speedup alto com
 acceptance <0.3 ⇒ proposer ruim, não técnica invalidada.
+
+### §21.3 FASE B — resultado: NEUTRO (0.995×), algoritmo validado, runtime come o ganho
+
+Implementado (`runtime/speculative.py` + `_generate_speculative` em inference.py,
+flag CLI `--speculative K`): NGramSpeculator (n=3, dict determinístico, chain
+proposal), greedy acceptance por argmax, rollback por restauração dos k slots,
+Sampler consultado só no token bônus.
+
+**Experimento H1** (135M real, prompt periódico "quick brown fox"×20, greedy
+top_k=1, A/B INTERCALADO ×3, 32 tokens):
+
+| Métrica E2 | Valor |
+|---|---|
+| acceptance rate | **1.00** (40/40) |
+| tokens efetivos/forward | **2.45** |
+| rollback_restores | 0 |
+| snapshot custo | 1.5 ms (irrelevante) |
+| **speedup wall mediano** | **0.995× (neutro)** |
+
+**Diagnóstico (Caso B da taxonomia):** a hipótese ALGORÍTMICA funciona — aceitação
+perfeita e 2.45 tokens/forward provam o mecanismo. O que elimina o ganho é o CUSTO
+do verifier: `verify_chunk(k=4)` = 1.90× um `step()` (rope+matmul POR QUERY × 30
+camadas), e a rodada (verify + bônus) custa ~2.9× step para k+1=5 tokens ⇒ teto
+teórico ~1.7× antes dos custos fixos, consumido até a neutralidade na prática.
+
+**Bugs pegos no caminho (validação vale ouro):** cadeia do proposer quebrada no
+2º elo (janela n-1 não mantida após append); seed da tabela sem o prompt (rounds=0
+silencioso num teste fraco); rollback indexado por draft-vs-slot.
+
+**Alavancas futuras registradas (NÃO implementadas agora — disciplina):**
+fundir as k rotações/matrizes num único einsum; evitar re-rope dos sinks por query;
+sweep k∈{2,3}; proposer híbrido. Se algum dia isso levar verify abaixo de ~1.2×
+step, a trilha reabre com aceitação já provada.
+
+**Veredito:** faixa 1.0–1.15× = neutro/sem valor operacional hoje. Trilha E
+ENCERRADA sem dívida: mecanismo correto, métricas E2 completas, caminho opt-in
+(`--speculative K`) preservado para reabertura com os custos atacados.
