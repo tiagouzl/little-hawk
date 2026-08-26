@@ -6,11 +6,13 @@ Nexus (reservoir ponderado): usa scores de atenção para decidir vítima,
 mantendo sinks + janela recente intactos e gerindo o anel intermediário
 via reservoir sampling ponderado (arXiv 2606.23961).
 """
+
 import numpy as np
 
 
 class FIFOEviction:
     """Política atual — FIFO puro, O(1) e determinística."""
+
     def __init__(self, S=4, W=508):
         self.S, self.W = S, W
         self.win_ptr = 0
@@ -35,6 +37,7 @@ class NexusEviction:
     - R: tamanho da janela recente protegida (ex: 64)
     - alpha: decaimento EMA (0.9 = memória longa)
     """
+
     def __init__(self, S=4, W=508, R=64, alpha=0.9, seed=42):
         # R adaptativo: para W pequeno (demo 28) usa W//2, senão 64
         R = min(R, max(1, W // 2))
@@ -67,6 +70,7 @@ class NexusEviction:
     def ctx_array(self):
         """Array completo de slots a atender: sinks + vivos em ordem de recência."""
         import numpy as _np
+
         return _np.array(list(range(self.S)) + self.order, dtype=_np.int64)
 
     def next_slot(self, n_ctx):
@@ -88,6 +92,10 @@ class NexusEviction:
         idx_sorted = np.argpartition(ring_scores, k - 1)[:k]
         chosen = self.rng.choice(idx_sorted)
         victim = int(ring[int(chosen)])
+        # Corrige vazamento de reputação: zera EMA do ocupante anterior,
+        # senão o novo token herda score fantasma (alto protege indevidamente,
+        # baixo condena a reevicção prematura).
+        self.scores[victim] = 0.0
         # Reutiliza o slot da vítima para o novo token, mas recencia-o no fim da ordem
         self.order.remove(victim)
         self.order.append(victim)
@@ -110,7 +118,7 @@ class NexusEviction:
             w = w.mean(axis=0)
         elif w.ndim == 3:
             # [H, 1, n_ctx] ou [1, H, n_ctx]
-            w = w.mean(axis=tuple(range(w.ndim-1)))
+            w = w.mean(axis=tuple(range(w.ndim - 1)))
         w = w.reshape(-1)  # [n_ctx]
         # EMA: scores[ctx] = alpha*scores[ctx] + (1-alpha)*w
         if len(ctx) != len(w):
@@ -119,7 +127,7 @@ class NexusEviction:
             w = w[:m]
         self.scores[ctx] = self.alpha * self.scores[ctx] + (1 - self.alpha) * w.astype(np.float32)
         # Sinks mantêm score alto para nunca serem vítimas (não estão no anel)
-        self.scores[:self.S] = 1.0
+        self.scores[: self.S] = 1.0
 
 
 class NexusSalienceEviction(NexusEviction):
@@ -139,8 +147,7 @@ class NexusSalienceEviction(NexusEviction):
     surpresa, não peculiar a esta implementação.
     """
 
-    def __init__(self, S=4, W=508, R=64, alpha=0.9, seed=42,
-                 w_attn=1.0, w_sal=0.15):
+    def __init__(self, S=4, W=508, R=64, alpha=0.9, seed=42, w_attn=1.0, w_sal=0.15):
         super().__init__(S=S, W=W, R=R, alpha=alpha, seed=seed)
         self.w_attn = w_attn
         self.w_sal = w_sal  # 10 nats → contribuição 1.5 vs atenção ≤1; filler ~3 nats → 0.45
@@ -179,6 +186,8 @@ class NexusSalienceEviction(NexusEviction):
         idx_sorted = np.argpartition(ring_scores, k - 1)[:k]
         chosen = self.rng.choice(idx_sorted)
         victim = int(ring[int(chosen)])
+        self.scores[victim] = 0.0
+        self.salience[victim] = 0.0
         self.order.remove(victim)
         self.order.append(victim)
         self.n_reservoir += 1

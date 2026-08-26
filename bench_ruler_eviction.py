@@ -100,20 +100,27 @@ WEEKDAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "se
 
 # prefixos por formato — a continuação termina exatamente com eles (estilo continuation)
 NEEDLE_SPECS = {
-    "number": {"prefix": "O número mágico secreto para esta tarefa é",
-               "choices": None,  # aleatório 6 dígitos
-               "pattern": r"\b(\d{6})\b"},
-    "date":   {"prefix": "O dia marcado em segredo para esta tarefa é",
-               "choices": WEEKDAYS,
-               "pattern": "(" + "|".join(WEEKDAYS) + ")"},
-    "word":   {"prefix": "A palavra secreta combinada para esta tarefa é",
-               "choices": SECRET_WORDS,
-               "pattern": "(" + "|".join(SECRET_WORDS) + ")"},
+    "number": {
+        "prefix": "O número mágico secreto para esta tarefa é",
+        "choices": None,  # aleatório 6 dígitos
+        "pattern": r"\b(\d{6})\b",
+    },
+    "date": {
+        "prefix": "O dia marcado em segredo para esta tarefa é",
+        "choices": WEEKDAYS,
+        "pattern": "(" + "|".join(WEEKDAYS) + ")",
+    },
+    "word": {
+        "prefix": "A palavra secreta combinada para esta tarefa é",
+        "choices": SECRET_WORDS,
+        "pattern": "(" + "|".join(SECRET_WORDS) + ")",
+    },
 }
 
 
-def build_prompt(context_length: int, depth: float, rng: random.Random,
-                 style: str = "continuation", fmt: str = "number") -> tuple[str, str]:
+def build_prompt(
+    context_length: int, depth: float, rng: random.Random, style: str = "continuation", fmt: str = "number"
+) -> tuple[str, str]:
     """
     Monta um prompt de ~context_length tokens com uma agulha na profundidade `depth`.
     Retorna (prompt, segredo_esperado).
@@ -235,8 +242,9 @@ def run_cli(
     return stdout, wall_s, peak_rss, timed_out
 
 
-def run_mock(prompt: str, eviction: str, secret: str, context_length: int,
-             rng: random.Random, fmt: str = "number") -> str:
+def run_mock(
+    prompt: str, eviction: str, secret: str, context_length: int, rng: random.Random, fmt: str = "number"
+) -> str:
     """Simula respostas plausíveis pra validar a lógica do harness sem pesos reais."""
     overflow = max(0, context_length - 512)
     if eviction == "fifo":
@@ -271,7 +279,9 @@ def run_sweep(args, eviction_modes: list[str]) -> list[TrialResult]:
         for depth in args.depths:
             for rep in range(args.repeats):
                 # Prompt gerado UMA vez, reaplicado a cada modo de evicção.
-                prompt, magic_number = build_prompt(ctx_len, depth, rng, style=args.prompt_style, fmt=args.needle_format)
+                prompt, magic_number = build_prompt(
+                    ctx_len, depth, rng, style=args.prompt_style, fmt=args.needle_format
+                )
                 trial_id += 1
 
                 for eviction in eviction_modes:

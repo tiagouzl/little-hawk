@@ -304,6 +304,34 @@ class TestNexusSalience:
             assert np.isfinite(logits).all()
         assert len(eng.eviction.order) == 28 and len(set(eng.eviction.order)) == 28
 
+    def test_score_reset_on_reuse(self):
+        """Regressão do vazamento de EMA: vítima reaproveitada não herda score."""
+        from engine.eviction import NexusEviction
+
+        p = NexusEviction(S=4, W=64, R=8, seed=1)
+        for n in range(5, 5 + 64 + 1):
+            p.next_slot(n)
+        ring = p.order[: p.W - p.R]
+        # força score alto em todo anel para que qualquer vítima tenha fantasma
+        for s in ring:
+            p.scores[s] = 0.8
+        victim, _ = p.next_slot(100)
+        assert p.scores[victim] == 0.0, f"score vazou: {p.scores[victim]} != 0.0"
+
+    def test_salience_score_reset_on_reuse(self):
+        from engine.eviction import NexusSalienceEviction
+
+        p = NexusSalienceEviction(S=4, W=64, R=8, seed=1)
+        for n in range(5, 5 + 64 + 1):
+            p.next_slot(n)
+        ring = p.order[: p.W - p.R]
+        for s in ring:
+            p.scores[s] = 0.8
+            p.salience[s] = 5.0
+        victim, _ = p.next_slot(100)
+        assert p.scores[victim] == 0.0
+        assert p.salience[victim] == 0.0
+
 
 class TestVerifyChunk:
     """Fase A speculative: verify_chunk ≡ steps sequenciais (obrigatório)."""
