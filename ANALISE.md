@@ -525,3 +525,65 @@ devem comprimir o ganho pela limitação documentada em §20.3.
 **Status:** `--eviction nexus-salience` promovido a experimental recomendado para
 tarefas recall-heavy com fatos raros; FIFO permanece default (custo zero, sem
 hiperparâmetros, comportamento garantido).
+
+## 21. Trilha E — Speculative Decoding N-gram (pré-registro + Fase A concluída)
+
+### §21.0 Correção de escopo (revisão de código)
+
+O parecer inicial afirmava "verificação via `prefill()` batched já existente" —
+**incompleto**: `prefill()` assume cache vazio (slots 0..T-1). O que se precisa é
+de um *verificador causal batched sobre estado existente* — nova operação,
+`engine/speculative.py:verify_chunk()`. Fase A = essa operação + equivalência;
+N-gram/reject-sampling vêm DEPOIS.
+
+### §21.1 FASE A — verify_chunk: CONCLUÍDA ✅
+
+`verify_chunk(engine, tokens, caches, win_ptr, n_ctx)` → logits `[k,V]` + estado
+final, equivalente a k steps sequenciais. Duas sutilezas do sequencial descobertas
+e replicadas exatamente:
+
+1. **Rotação RoPE por query** — o passo de t_i ranqueia a janela com win_ptr
+   corrente (s_i no topo, pos S+W-1); rotação única com wp final daria distância
+   relativa ≠ 0 para a própria chave;
+2. **Stale visibility** — query t_i enxerga o conteúdo VELHO dos slots que serão
+   sobrescritos pelos candidatos futuros (chaves E valores). Solução:
+   write-per-query + snapshot evolutivo de valores; sem máscara na estacionária
+   (máscara causal explícita apenas na fase fill).
+
+**Contrato de tolerância (medido, k=1 controle):** o caminho batched diverge
+1.4e-2 dos logits sequenciais por REORDENAÇÃO de ops fp (rope/matmul/softmax
+separados sinks×janela) — presente já em k=1, não cresce com k. O que greedy
+speculation consome é argmax: exigido 100% nos cenários testados. Cache/win_ptr
+exatos; logits atol=5e-2 rtol=1e-2.
+
+**Fallbacks v1 (documentados):** FIFO only (reservoir escolhe vítimas por step
+com scores intra-chunk — problema distinto); chunk não cruza fronteira
+fill→estacionária; n_ctx>S.
+
+Testes: `TestVerifyChunk` (estacionária c/ wrap 25→29..32→4, fill, fronteira,
+evicção-fallback) — 38 passed total.
+
+### §21.2 Fases B/C — PRÉ-REGISTRO (antes da implementação)
+
+**Fase B — Greedy speculation:** `runtime/inference.py` ganha caminho opcional:
+NGramSpeculator (dict simples, n∈{2,3}, k=4) propõe → verify_chunk verifica →
+aceita enquanto argmax bate → primeiro mismatch: modelo assume pelo logit do
+último token aceito. Rollback por cópia de buffers (`k.copy()` — 70.8MB, aceitável).
+Desacoplado do Sampler (greedy não o consulta).
+
+**Fase C — Reject sampling:** só depois de B medido; correção
+`min(1, exp(r_draft - r_target))` por posição para temperature>0.
+
+**Hipóteses (métricas obrigatórias por trial, conforme emenda E2 do parecer):**
+
+| Métrica | H1 (texto repetitivo, greedy/min_p baixo) | H2 (temp ≥0.9) |
+|---|---|---|
+| speedup vs sequencial | **≥1.3×** | ≤1.05× (neutro) |
+| acceptance rate | ≥0.5 | qualquer, reportado |
+| tokens efetivos/forward | ≥1.5 | ~1 |
+| top-1 match vs sequencial | 100% nos tokens emitidos | 100% |
+| RSS delta (tabela n-gram) | <50MB | <50MB |
+
+Falsificação: speedup <1.15× em H1 ⇒ mecanismo não paga overhead neste hardware
+→ documentar e encerrar trilha (mesmo critério int8/Cython). Speedup alto com
+acceptance <0.3 ⇒ proposer ruim, não técnica invalidada.

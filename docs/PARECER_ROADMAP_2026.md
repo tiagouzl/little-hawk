@@ -207,3 +207,37 @@ Mesma lógica vale para BitNet: a distinção *quantizar modelo existente* ≠
 
 Não é clone de llama.cpp, não é framework universal de arquiteturas, não é
 playground de papers. As emendas E1–E3 e os veredictos §§1–4 derivam dessa definição.
+
+---
+
+## Revisão v1.2 — Correção técnica material (revisão de código, 26/08/2026)
+
+**Correção ao item 3a:** o claim *"verificação paralela já existe via `prefill()`"*
+estava **tecnicamente incompleto** e é substituído por:
+
+> O `prefill()` demonstra que o runtime já possui um caminho GEMM-batched eficiente;
+> precisamos **generalizar essa ideia para uma verificação causal batched sobre um
+> estado de cache já existente**.
+
+Motivo (verificado no código): `prefill()` assume cache vazio — escreve K/V em
+slots `0..T-1`, máscara causal do zero. Chamar `prefill(candidatos)` após o prompt
+**reiniciaria semanticamente o contexto**. Reaproveitar o *conceito* e os kernels
+é correto; reutilizar a função literalmente, não.
+
+**Consequências para o roadmap (fase A antes de tudo):**
+
+1. `engine/speculative.py` (não `runtime/`): `verify_chunk(engine, tokens, caches,
+   win_ptr, n_ctx)` — extensão causal batched sobre o estado existente;
+   candidatos são sequência única `t0→t1→…` com máscara triangular própria;
+2. Equivalência obrigatória ANTES de qualquer N-gram: logits/cache/win_ptr/positions
+   vs steps sequenciais (mesmo padrão dos testes TestPrefill);
+3. Rollback por cópia de buffers (`k.copy()`) — k≤4 torna isso aceitável na v1;
+4. Greedy speculation primeiro (aceita enquanto argmax coincide); reject sampling
+   só depois; desacoplado do `Sampler`;
+5. v1 FIFO-only: evicção reservoir escolhe vítimas por step com scores que mudam
+   a cada camada-0 — batching sob reservoir é problema distinto, cai no fallback
+   sequencial documentado.
+
+**Hipótese refraseada conforme revisão:** não "speculative decoding é mais rápido
+por definição", e sim — *se 4 verificações virarem GEMMs maiores, há ganho mesmo
+executando mais FLOPs, porque o gargalo medido é dispatch/GEMV, não FLOPs.*

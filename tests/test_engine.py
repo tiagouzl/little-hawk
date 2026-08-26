@@ -9,6 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from engine.engine import MultiLayerEngine
+from engine.speculative import verify_chunk
 from runtime.inference import LittleHawkInference
 from runtime.tokenizer import CORPUS, BPETokenizer
 
@@ -302,3 +303,84 @@ class TestNexusSalience:
             logits, caches, wp, _ = eng.step(n % eng.V, caches, wp, n)
             assert np.isfinite(logits).all()
         assert len(eng.eviction.order) == 28 and len(set(eng.eviction.order)) == 28
+
+
+class TestVerifyChunk:
+    """Fase A speculative: verify_chunk ≡ steps sequenciais (obrigatório)."""
+
+    def _setup(self, engine, n_prefill, n_steps):
+        eng = engine
+        caches = eng.init_cache()
+        wp = 0
+        rng = np.random.default_rng(11)
+        ids = rng.integers(0, eng.V, size=n_prefill).tolist()
+        lg, caches, wp, _ = eng.prefill(ids, caches)
+        for i in range(n_steps):
+            t = int(rng.integers(0, eng.V))
+            lg, caches, wp, _ = eng.step(t, caches, wp, n_prefill + i + 1)
+        return caches, wp, n_prefill + n_steps
+
+    def _seq_vs_verify(self, eng, n_ctx, wp, caches_a, k):
+        rng = np.random.default_rng(99)
+        toks = [int(t) for t in rng.integers(0, eng.V, size=k)]
+        # sequencial (referência)
+        ca = [(k_.copy(), v.copy()) for k_, v in caches_a]
+        seq_logits = []
+        n = n_ctx
+        wpa = wp
+        for t in toks:
+            n += 1
+            lg, ca, wpa, _ = eng.step(t, ca, wpa, n)
+            seq_logits.append(lg[0])
+        # batched (candidatos)
+        cb = [(k_.copy(), v.copy()) for k_, v in caches_a]
+        lg_b, cb, wpb, sm = verify_chunk(eng, toks, cb, wp, n_ctx)
+        return toks, np.array(seq_logits), lg_b, ca, cb, wpa, wpb
+
+    def test_stationary_equivalence_with_wrap(self):
+        eng = MultiLayerEngine(d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=512)
+        # 32 prefill + 25 steps → win_ptr=25; chunk k=4 força wrap 25→2
+        caches, wp, n_ctx = self._setup(eng, n_prefill=32, n_steps=25)
+        assert wp == 25 and n_ctx > eng.max_cap
+        toks, seq_lg, bat_lg, ca, cb, wpa, wpb = self._seq_vs_verify(eng, n_ctx, wp, caches, k=4)
+        assert wpb == wpa == (25 + 4) % 28
+        # Contrato de tolerância (medido, não arbitrário): com k=1 o caminho
+        # batched já diverge 1.4e-2 do sequencial por REORDENAÇÃO de ops fp
+        # (rope/matmul/softmax separados p/ sinks×janela). O que speculation
+        # greedy consome é o ARGMAX — exigido exato em todas as posições.
+        for j in range(len(toks)):
+            assert seq_lg[j].argmax() == bat_lg[j].argmax(), f"top-1 divergiu em pos {j}"
+        np.testing.assert_allclose(bat_lg, seq_lg, atol=5e-2, rtol=1e-2)
+        d = max(np.abs(ca[i][0] - cb[i][0]).max() for i in range(eng.n_layers))
+        assert d < 5e-2, f"cache divergiu: {d}"
+
+    def test_fill_phase_equivalence(self):
+        eng = MultiLayerEngine(d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=512)
+        caches, wp, n_ctx = self._setup(eng, n_prefill=10, n_steps=0)
+        toks, seq_lg, bat_lg, ca, cb, wpa, wpb = self._seq_vs_verify(eng, n_ctx, wp, caches, k=5)
+        assert wpb == wpa
+        np.testing.assert_allclose(bat_lg, seq_lg, atol=2e-3, rtol=1e-3)
+        d = max(np.abs(ca[i][0] - cb[i][0]).max() for i in range(eng.n_layers))
+        assert d < 2e-4
+
+    def test_boundary_crossing_raises(self):
+        from engine.speculative import verify_chunk
+
+        eng = MultiLayerEngine(d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=512)
+        caches, wp, n_ctx = self._setup(eng, n_prefill=30, n_steps=0)  # n_ctx=30, cap=32
+        with pytest.raises(ValueError, match="indisponível"):
+            verify_chunk(
+                eng,
+                [1, 2, 3, 4],
+                [(c.copy()) for c, _ in []] or [(np.zeros((1, 4, 32, 32), np.float32),) * 2],
+                wp,
+                n_ctx,
+            )
+
+    def test_eviction_falls_back(self):
+        from engine.speculative import can_verify
+
+        eng = MultiLayerEngine(
+            d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=512, eviction="nexus"
+        )
+        assert can_verify(eng, n_ctx=100, k=4) is False
