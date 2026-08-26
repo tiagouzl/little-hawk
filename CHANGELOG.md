@@ -2,6 +2,32 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [0.8.0] - 2026-08-26
+
+### 🧬 Transplants SmolLM2 (135M / 360M / 1.7B)
+- `--model smollm2-{135m,360m,1.7b}` no CLI de transplant; configs em `utils/config.py`.
+- Fix BF16: `load_safetensors()` converte bfloat16→float32 via shift de bits (o NumPy não entende o dtype cru).
+
+### 🎯 Evicção Nexus e Nexus-Salience (trilhas D/D2)
+- Novo `engine/eviction.py`: FIFO explícito + reservoir ponderado por atenção + **piso de surpresa** (`nexus-salience`): score = w_attn·EMA(atenção) + w_sal·surprisal na chegada (capturado do forward, sem passada extra).
+- Fix estrutural: ordem de recência explícita (`NexusEviction.order`) — a leitura deixou de assumir layout FIFO após escritas por override; reset entre gerações (`init_cache`).
+- **Resultado RULER pareado (21 prompts, McNemar exato): nexus-salience 0.95 vs fifo 0.52 (p=0.004, 9/9 discordâncias)** — dominância em depth 0.1 (fora da janela de recência). Detalhes: ANALISE §20–20.4.
+
+### 🔧 Correções
+- Dockerfile: CMD `api:app` → `api.server:app`.
+- Prefill batched: bias Q/K/V do Qwen somado antes do reshape (ValueError com >1 token).
+- Prefill chunked para prompts > 512 tokens (primeiro chunk batched + restante sequencial).
+- Rollback silencioso ONNX+eviction: agora avisa qualquer modo ≠ fifo.
+- Dependências: fastapi/uvicorn movidos para extra `[api]`; colorama removido (morto) — "Sem frameworks" literal para o motor.
+
+### ⚗️ Investigados e documentados (ANALISE §21 + PARECER_ROADMAP)
+- **N-gram speculative decoding**: Fase A (verificador causal batched `verify_chunk`) validado contra sequencial; Fase B greedy → **neutro (0.995×)**: aceitação 100% mas verifier custa 1.9× step. Alavancas de reabertura registradas.
+- Free-threading 3.13t: teto é bandwidth de memória — mantido 3.12 + Semaphore(2).
+- Ops contrib ONNX (com.microsoft): ausentes do wheel pip — trilha cancelada.
+- Mamba/MiniCache/BitNet/Saguaro avaliados e recusados com justificativa (PARECER_ROADMAP_2026.md).
+
+---
+
 ## [0.7.0] - 2026-08-24
 
 ### ⚡ Prefill batched — TTFT até 20× menor

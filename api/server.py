@@ -63,7 +63,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Little Hawk API", version="0.4.0", lifespan=lifespan)
+app = FastAPI(title="Little Hawk API", version="0.8.0", lifespan=lifespan)
 
 
 class ClientDisconnected(Exception):
@@ -235,4 +235,4 @@ async def root():
         from fastapi.responses import FileResponse
 
         return FileResponse(demo_path)
-    return {"message": "Little Hawk API v0.4.0"}
+    return {"message": "Little Hawk API v0.8.0"}
