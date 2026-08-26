@@ -144,3 +144,66 @@ que se apoia em ativos que o projeto já possui.
 
 *"Só entregar se ganho superar claramente a perda"* — critério acordado no §11, válido
 para features tanto quanto para microbenchmarks.
+
+---
+
+## Revisão v1.1 — Emendas da revisão externa (26/08/2026)
+
+Três emendas aceitas à proposta original; nenhuma altera veredictos, todas endurecem execução.
+
+### E1 — Speculator como abstração mínima ANTES do N-gram
+
+Um passo antes de `runtime/speculative.py`: contrato pequeno com quatro operações,
+e `NGramSpeculator` como primeira implementação concreta.
+
+```
+Speculator          # contrato
+├── propose(ctx_ids) -> k candidatos
+├── verify(batched_forward) -> logprobs dos k
+├── accept()        # reject-sampling corrigido
+└── rollback(n)
+```
+
+Justificativa: se N-gram funcionar, estratégias futuras (prompt lookup puro,
+cache lookup, draft model pequeno) plugam sem reescrever a verificação.
+**Restrição explícita:** manter mínimo — sem ABC/formalismos; dataclass +
+funções bastam. A abstração existe para servir o experimento, não para
+precedê-lo em complexidade.
+
+### E2 — H1 endurecido: speedup sem acceptance rate não conta
+
+Speedup isolado é ambíguo economicamente (1/4 aceitos vs 4/4 aceitos são
+"funcionando" com custos opostos). Registro obrigatório por trial:
+
+| Métrica | Definição |
+|---|---|
+| tokens propostos | total de candidatos gerados pelo speculator |
+| tokens aceitos | candidatos que sobreviveram à verificação |
+| acceptance rate | aceitos/propostos |
+| tokens efetivos/forward | throughput real vs 1 token/forward do baseline |
+| ms/token | latência média por token emitido |
+| speedup | vs rollout sequencial, mesmo prompt/seed |
+| top-k match | equivalência vs sequencial (obrigatório 100% nos aceitos) |
+| memória adicional | RSS delta da tabela n-gram |
+
+Falso positivo a evitar: speedup alto com acceptance rate baixo indica overhead
+de verificação pagando por nada — nesse caso a conclusão é "mecanismo correto,
+política de proposal ruim", não "speculative decoding funciona".
+
+### E3 — Mamba: fora do roadmap imediato ≠ fora do conhecimento estratégico
+
+Distinção preservada no registro: a recusa é sobre **ordem**, não sobre valor
+permanente. Se o ecossistema produzir checkpoints híbridos pequenos compatíveis
+com transplant (ou o projeto ganhar hardware), a análise do item 1 é reaberta —
+a matemática SSM em NumPy permanece conhecimento mapeado, não descartado.
+Mesma lógica vale para BitNet: a distinção *quantizar modelo existente* ≠
+*modelo que nasceu quantizado* fica registrada como critério permanente.
+
+### Identidade técnica (registrada conforme revisão)
+
+> Um runtime experimental de inferência CPU no qual cada otimização precisa
+> provar valor contra um pipeline real, com equivalência numérica e benchmarks
+> reproduzíveis.
+
+Não é clone de llama.cpp, não é framework universal de arquiteturas, não é
+playground de papers. As emendas E1–E3 e os veredictos §§1–4 derivam dessa definição.
