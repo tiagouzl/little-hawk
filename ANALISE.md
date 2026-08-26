@@ -666,3 +666,24 @@ baixa); 1 checkpoint; word format foi o mais fácil para ambas as políticas
 **Veredito:** generalização CONFIRMADA nos formatos testados, incluindo os
 dois desenhados como adversários. `nexus-salience` permanece experimental
 recomendado para recall-heavy; FIFO default por custo zero.
+
+## BASELINE v0.8.0 — checkpoint científico congelado (26/08/2026)
+
+```
+commit: a8d02f8  tag: v0.8.0
+testes: 42/42
+generalização §22: 22cdac1 (11/12 depth 0.1, salience 1.00)
+```
+
+**Speculative:**
+- verify_chunk correctness: PASS (equivalência vs sequencial)
+- verify_chunk cost: **1.90× step** (medido, k=4)
+- alvo: ~1.20× step
+- timebox: 1h
+
+**Salience:**
+- §22: 11/12 (depth 0.1)
+- n=4/célula, 1 seed-set
+- generalização ampla: **PENDENTE**
+
+Próximo experimento: speculative-rope (fusão) a partir deste baseline.
