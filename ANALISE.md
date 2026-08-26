@@ -607,23 +607,103 @@ top_k=1, A/B INTERCALADO ×3, 32 tokens):
 | **speedup wall mediano** | **0.995× (neutro)** |
 
 **Diagnóstico (Caso B da taxonomia):** a hipótese ALGORÍTMICA funciona — aceitação
-perfeita e 2.45 tokens/forward provam o mecanismo. O que elimina o ganho é o CUSTO
-do verifier: `verify_chunk(k=4)` = 1.90× um `step()` (rope+matmul POR QUERY × 30
-camadas), e a rodada (verify + bônus) custa ~2.9× step para k+1=5 tokens ⇒ teto
-teórico ~1.7× antes dos custos fixos, consumido até a neutralidade na prática.
+perfeita e 2.45 tokens/forward provam o mecanismo. A neutralidade wall-clock
+(0.995×) não é custo do verifier: `verify_chunk(k=4)` roda em ~0.55× de 4 steps
+sequenciais (correção do §21.3, medida no §21.5). O que consome o ganho é o custo
+fixo do ciclo speculator (lookup + argmax + rollback) e o token bônus, que juntos
+pagam ~2.9× step para k+1=5 tokens — teto teórico ~1.7× antes dos custos fixos,
+consumido até a neutralidade na prática.
 
 **Bugs pegos no caminho (validação vale ouro):** cadeia do proposer quebrada no
 2º elo (janela n-1 não mantida após append); seed da tabela sem o prompt (rounds=0
 silencioso num teste fraco); rollback indexado por draft-vs-slot.
 
-**Alavancas futuras registradas (NÃO implementadas agora — disciplina):**
-fundir as k rotações/matrizes num único einsum; evitar re-rope dos sinks por query;
-sweep k∈{2,3}; proposer híbrido. Se algum dia isso levar verify abaixo de ~1.2×
-step, a trilha reabre com aceitação já provada.
+**Alavancas futuras investigadas (§21.4–5, NÃO implementadas no código):** fusão
+das k rotações/matrizes num único einsum; evitar re-rope dos sinks por query;
+sweep k∈{2,3}; proposer híbrido. Ver §21.5 para resultado dessas investigações.
 
-**Veredito:** faixa 1.0–1.15× = neutro/sem valor operacional hoje. Trilha E
-ENCERRADA sem dívida: mecanismo correto, métricas E2 completas, caminho opt-in
-(`--speculative K`) preservado para reabertura com os custos atacados.
+**Veredito:** verify_chunk é estruturalmente viável e rápido (0.55× de k steps em
+k=4), mas o ciclo speculator completo não gera speedup wall-clock neste hardware.
+Trilha E ENCERRADA sem dívida: mecanismo correto, métricas E2 completas, caminho
+opt-in (`--speculative K`) preservado.
+
+### §21.4 B0 — microbenchmark instrumentado: componente breakdown
+
+**Motivo:** o KPI `verify(k)/step` (= 1.90× em k=4) comparava k candidatos com
+**um** step sequencial — métrica correta é `verify(k)/(k × step)`.
+
+**Protocolo:** 135M real, FIFO, stationary (n_ctx=600 > max_cap=512), R=20,
+k={1,2,4,8}, instrumentação por componente com `time.perf_counter_ns()`.
+
+**Resultado — verify vs k steps (KPI CORRIGIDO):**
+
+| k | k×step (ms) | verify (ms) | verify/(k×step) |
+|---|---|---|---|
+| 1 | 56 | 110 | 1.96× |
+| 4 | 225 | 124 | **0.55×** |
+| 8 | 454 | 177 | **0.39×** |
+
+**verify_chunk já é ~2× mais rápido que k steps sequenciais em k=4.**
+
+**Breakdown por componente (k=4, mediana):**
+
+| Componente | ms | % |
+|---|---|---|
+| rope_k (janela S+W) | 53.3 | **43.0%** |
+| FFN | 37.9 | 30.7% |
+| av_out (attn × V) | 12.4 | 10.0% |
+| qkv_proj | 7.9 | 6.4% |
+| qk_score | 7.6 | 6.1% |
+| write_cache | 2.8 | 2.3% |
+| reshape | 1.8 | 1.5% |
+| rms_norm | 1.5 | 1.2% |
+| softmax | 0.4 | 0.3% |
+
+**Scaling k=1→8:** 110→177 ms = 1.61× (sublinear — confirma amortização de
+overhead fixo). rope_k escala 45→200 ms (4.44× para 8× keys — parcialmente
+batched por BLAS, mas não linear).
+
+**Diagnóstico:** rope_k é o maior componente individual, mas não é "ruim" —
+é o custo intrínseco de rotacionar 512 keys por query, multiplicado por k queries.
+A fusão proposta no §21.2 (batch das k rotações) foi testada no §21.5.
+
+### §21.5 B1 — batch de rope_k: FALHA (1.6× mais lento), trilha encerrada
+
+**Hipótese:** pre-computar rope_k para todas k queries num único batch
+`_rope_numpy(kc, rankings, inv_freq)` elimina k-1 chamadas, reduzindo 43% do custo.
+
+**Teste isolado (d_k=64, W=508, k=4, R=200):**
+
+| Método | ms | vs individual |
+|---|---|---|
+| 4× `_rope_numpy` (escalar) | 1.189 | 1.00× |
+| 1× batch broadcast | 1.901 | **1.60× mais lento** |
+
+**Mecanismo:** `_rope_numpy` com position escalar gera `np.outer(scalar, inv_freq)`
+→ `(1, d_k//2)` trivial, e broadcast `(1,H,W,d_k) × (1,1,1,d_k)` — ótimo para
+NumPy. O batch gera `np.outer(array, inv_freq)` → `(k, d_k//2)`, `np.sin/np.cos`
+em arrays `(k, d_k)`, e broadcast `(1,H,W,d_k) × (k,1,1,d_k)` — overhead de
+materialização de intermediários maiores domina o ganho de eliminar k-1 chamadas.
+
+**Equivalência:** 28/28 testes PASS (revert limpo, sem alteração de código).
+
+**Decisão:** Nesta implementação NumPy, neste hardware e nestas dimensões, a
+fusão proposta de RoPE não apresentou vantagem. Não há justificativa para substituir
+o caminho escalar atual. Reabertura somente se surgir novo backend/kernel capaz de
+alterar o custo fundamental da operação.
+
+**Estado final da Trilha E:**
+
+```
+Speculative verification
+  ├── correctness       PASS
+  ├── batching          PASS (verify 0.55× de k steps em k=4)
+  ├── speed vs k steps  EXCELENTE
+  └── local RoPE fusion FAIL (1.6× mais lento)
+                       │
+                       ▼
+                  CLOSED
+```
 
 ## 22. Generalização do nexus-salience — formatos adversários NÃO comprimiram o ganho
 
@@ -677,9 +757,9 @@ generalização §22: 22cdac1 (11/12 depth 0.1, salience 1.00)
 
 **Speculative:**
 - verify_chunk correctness: PASS (equivalência vs sequencial)
-- verify_chunk cost: **1.90× step** (medido, k=4)
-- alvo: ~1.20× step
-- timebox: 1h
+- verify_chunk cost: **0.55× de k steps** (k=4, medido B0 §21.4 — era 1.90× vs 1 step)
+- verify_chunk B1 (rope batch): FAIL — 1.6× mais lento (§21.5)
+- trilha: **CLOSED**
 
 **Salience:**
 - §22: 11/12 (depth 0.1)

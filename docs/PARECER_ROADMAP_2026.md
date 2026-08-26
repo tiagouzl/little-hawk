@@ -15,7 +15,7 @@
 | 2a | MiniCache (compressão entre camadas) | **Recusar (com número)** | Cache = 70.8MB de 1.28GB RSS (5.5%); metade dele economiza ~35MB — problema que O(1) já resolveu |
 | 2b | RocketKV (evicção permanente+ dinâmica) | **Adiar** | Testável, mas `nexus-salience` acabou de dominar o RULER (p=0.004); margem estreita, complexidade alta |
 | 2c | SmallKV / FP4 simulado | **Recusar** | Padrão já refutado no §11: sub-byte simulado em NumPy perde para fp32 (upcast mata o ganho) |
-| 3a | **N-gram Speculative Decoding** | **IMPLEMENTAR** | Sem modelo draft, lookup array puro, verificação via `prefill()` batched já existente |
+| 3a | **N-gram Speculative Decoding** | **CLOSED** | Mecanismo correto (verify 0.55× de k steps), mas ciclo completo não gera speedup wall-clock; B1 rope batch negativo (1.6×) |
 | 3b | Saguaro/SSD | **Não verificável** | Claim "5×" não auditável; padrão `fast_step` sugere dispatch Python como gargalo, não verificação |
 | 4 | BitNet/XNOR-Popcount/Integer-only | **Recusar** | Exige checkpoints treinados nativamente em b1.58; binarização post-hoc já destruiu qualidade em int4 (§17) |
 
@@ -68,28 +68,21 @@ puro porque o upcast por token elimina o ganho de banda. Simulação FP4 via bit
 instruções que o hardware de referência **não possui** — o README documenta
 explicitamente "i5-10210U (4 cores, sem AVX-512)".
 
-## 3. Speculative Decoding — a única frente ouro
+## 3. Speculative Decoding — ENCERRADO
 
-### 3a. N-gram speculative decoding — IMPLEMENTAR
+### 3a. N-gram speculative decoding — CLOSED
 
-Única proposta alinhada em todas as dimensões do projeto:
+Implementado e medido (§21.1–5 do ANALISE.md). Resultado:
 
-* **Sem modelo rascunhador** — usa prompt + histórico como tabela de n-gramas;
-  filosofia leve preservada, zero dependência nova.
-* **Lookup puro em array** — dict hash → candidatos de próximo token; custo ~zero.
-* **Verificação paralela já existe**: aceitar/rejeitar k rascunhos é um forward batched
-  `[k,d]@[d,m]` — exatamente o `prefill()` do §18, que já provou ser 10–20× mais
-  eficiente que steps sequenciais no mesmo hardware.
-* **Testável com infraestrutura existente**: `benchmark_latency.py` + verificação
-  top-k idêntica à validação do ONNX (§16).
-
-**Expectativa honesta, por regime:**
-
-| Regime | Expectativa |
-|---|---|
-| Greedy / min_p baixo, texto previsível | speedup ≥1.3× plausível |
-| Amostragem criativa (temp ≥0.9) | ≤5% — reject-sampling corrige a distribuição mas a taxa de aceitação despenca |
-| Equivalência top-k vs rollout sequencial | obrigatória, 100% |
+- **verify_chunk** é estruturalmente viável: 0.55× de k steps sequenciais em k=4,
+  0.39× em k=8 (§21.4, B0).
+- **Ciclo speculator completo** não gera speedup wall-clock (0.995× neutro, §21.3):
+  custo fixo do ciclo (lookup + argmax + rollback + token bônus) consome o ganho.
+- **B1 (fusão rope_k):** batching proposto foi 1.6× mais lento que chamadas
+  individuais (§21.5). Neste backend NumPy, não há justificativa para substituição.
+- **Equivalência:** 28/28 testes.
+- **Reabertura somente se:** surgir novo backend/kernel capaz de alterar o custo
+  fundamental da operação de rotação RoPE.
 
 ### 3b. Saguaro/SSD — não verificável
 
@@ -111,26 +104,22 @@ BitNet pequeno compatível com o pipeline de transplant, é matemática órfã i
 
 ## Roadmap recomendado (contraproposta)
 
-**Ciclo atual — n-gram speculative decoding:**
+**Ciclo atual — ENCERRADO (trilha E fechada, §21.4–5):**
 
-1. `runtime/speculative.py`: tabela n-gram do prompt + janela recente
-   (hash → candidatos next-token, O(1));
-2. Draft de k≤4 → verificação num único forward batched reaproveitando `prefill()`;
-   aceitar prefixo com correção reject-sampling para temperatura >0;
-3. Flag opt-in `--speculative k`, fallback automático ao rollout sequencial;
-4. **Pré-registro no `ANALISE.md §21` antes do bench** (protocolo §20.3):
-   - H1: speedup ≥1.3× em greedy/min_p baixo sobre texto repetitivo;
-   - H2: ≤5% de delta em temp ≥0.9 (nem positivo nem negativo relevante);
-   - H3: equivalência top-k 100% vs rollout sequencial nos tokens aceitos.
-5. Métricas: ms/token efetivo por bucket de repetibilidade + top-k match.
+1. ~~`runtime/speculative.py`: tabela n-gram do prompt + janela recente~~ ✓
+2. ~~Draft de k≤4 → verificação batched via `verify_chunk()`~~ ✓
+3. ~~Flag opt-in `--speculative K`~~ ✓
+4. **Resultado:** verify_chunk rápido (0.55× de k steps), mas ciclo completo neutro.
+   B1 rope batch negativo (1.6×). Trilha CLOSED.
 
 **Backlog mantido (dependências externas, inalterado):**
 ORT `cp313t` wheel → reavaliar migração free-threaded da API;
 int8 estático + VNNI → exige hardware/dataset fora do escopo atual;
 generalização do salience (seeds, checkpoints, formatos de agulha lexicalmente banais).
 
-**Rejeitados com justificativa documentada (esta análise):**
-Mamba/SSM híbrido, MiniCache, FP4 simulado, XNOR/BitNet post-hoc, Saguaro SSD.
+**Rejeitados/completados com justificativa documentada (esta análise):**
+Mamba/SSM híbrido, MiniCache, FP4 simulado, XNOR/BitNet post-hoc, Saguaro SSD,
+N-gram speculative decoding (CLOSED — §21.4–5).
 
 ---
 

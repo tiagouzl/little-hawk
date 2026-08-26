@@ -21,7 +21,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Dependências: fastapi/uvicorn movidos para extra `[api]`; colorama removido (morto) — "Sem frameworks" literal para o motor.
 
 ### ⚗️ Investigados e documentados (ANALISE §21 + PARECER_ROADMAP)
-- **N-gram speculative decoding**: Fase A (verificador causal batched `verify_chunk`) validado contra sequencial; Fase B greedy → **neutro (0.995×)**: aceitação 100% mas verifier custa 1.9× step. Alavancas de reabertura registradas.
+- **N-gram speculative decoding**: Fase A (verificador causal batched `verify_chunk`) validado contra sequencial; Fase B greedy → **neutro (0.995×)**: aceitação 100% mas ciclo speculator completo não gera speedup wall-clock.
+  - **B0 (§21.4):** verify_chunk = **0.55× de k steps** (k=4) — KPI corrigido (era 1.90× vs 1 step). Breakdown: rope_k 43%, FFN 31%, av_out 10%.
+  - **B1 (§21.5):** batch de rope_k testado → **1.6× mais lento** que chamadas individuais. Neste backend NumPy não há justificativa para substituição.
+  - Trilha E: **CLOSED**. Alavancas de reabertura documentadas.
 - Free-threading 3.13t: teto é bandwidth de memória — mantido 3.12 + Semaphore(2).
 - Ops contrib ONNX (com.microsoft): ausentes do wheel pip — trilha cancelada.
 - Mamba/MiniCache/BitNet/Saguaro avaliados e recusados com justificativa (PARECER_ROADMAP_2026.md).
