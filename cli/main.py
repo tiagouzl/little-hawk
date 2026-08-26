@@ -146,10 +146,12 @@ def build_tokenizer_and_engine(weights_path, eviction="fifo"):
             meta = json.load(f)
 
         if is_onnx_enabled():
-            if eviction == "nexus":
-                print(f"  {YELLOW}ONNX + Nexus ainda não suportado — usando FIFO{RESET}")
-            print(f"  {CYAN}ONNX Runtime ativado (LITTLE_HAWK_ONNX=1) — 1.21× vs NumPy, loop 600 validado{RESET}")
-            engine = get_engine(npz_path=weights_path)
+            if eviction != "fifo":
+                print(f"  {YELLOW}ONNX + evicção '{eviction}' ainda não suportado — usando FIFO{RESET}")
+            else:
+                print(f"  {CYAN}ONNX Runtime ativado (LITTLE_HAWK_ONNX=1) — 1.21× vs NumPy, loop 600 validado{RESET}")
+            # Grafo ONNX é single-token FIFO — evicção explícita, sem fallback silencioso
+            engine = get_engine(npz_path=weights_path, eviction="fifo")
         else:
             engine = get_engine(
                 d_model=int(meta.get("d_model", DEFAULT_MODEL_CONFIG["d_model"])),

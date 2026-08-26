@@ -131,7 +131,10 @@ def build_prompt(context_length: int, depth: float, rng: random.Random, style: s
         # Termina com o mesmo prefixo, sem o número — o modelo completa.
         prompt = " ".join(full) + f"\n\n{needle_prefix}"
     else:
-        prompt = " ".join(full) + "\n\nPergunta: qual é o número mágico secreto mencionado acima? Responda apenas com o número."
+        prompt = (
+            " ".join(full)
+            + "\n\nPergunta: qual é o número mágico secreto mencionado acima? Responda apenas com o número."
+        )
     return prompt, magic_number
 
 
@@ -155,12 +158,20 @@ def run_cli(
     sempre lido via communicate().
     """
     cmd = [
-        sys.executable, "-m", cli_module, "infer",
-        "--prompt", prompt,
-        "--eviction", eviction,
-        "--min-p", str(min_p),
-        "--max-tokens", str(max_tokens),
-        "--weights", weights,
+        sys.executable,
+        "-m",
+        cli_module,
+        "infer",
+        "--prompt",
+        prompt,
+        "--eviction",
+        eviction,
+        "--min-p",
+        str(min_p),
+        "--max-tokens",
+        str(max_tokens),
+        "--weights",
+        weights,
         "--no-panel",
         *extra_args,
     ]
@@ -261,17 +272,27 @@ def run_sweep(args, eviction_modes: list[str]) -> list[TrialResult]:
                         peak_rss, timed_out = None, False
                     else:
                         output, wall_s, peak_rss, timed_out = run_cli(
-                            args.cli_module, args.weights, prompt, eviction,
-                            args.min_p, args.max_tokens, args.timeout, [],
+                            args.cli_module,
+                            args.weights,
+                            prompt,
+                            eviction,
+                            args.min_p,
+                            args.max_tokens,
+                            args.timeout,
+                            [],
                         )
 
                     answered = extract_number(output)
                     correct = (answered == magic_number) and not timed_out
-                    results.append(TrialResult(ctx_len, depth, eviction, correct, wall_s, peak_rss, timed_out, output, trial_id))
+                    results.append(
+                        TrialResult(ctx_len, depth, eviction, correct, wall_s, peak_rss, timed_out, output, trial_id)
+                    )
 
                     done += 1
                     tag = "TIMEOUT" if timed_out else ("OK " if correct else "ERR")
-                    print(f"{ctx_len:6d} {depth:6.2f} {eviction:>6} {rep+1:4d}  [{tag}] ({done}/{total})  {wall_s:.1f}s")
+                    print(
+                        f"{ctx_len:6d} {depth:6.2f} {eviction:>6} {rep + 1:4d}  [{tag}] ({done}/{total})  {wall_s:.1f}s"
+                    )
 
     return results
 
@@ -292,7 +313,8 @@ def mcnemar_exact_p(b: int, c: int) -> float:
 
     def binom_cdf(k: int, n: int, p: float = 0.5) -> float:
         from math import comb
-        return sum(comb(n, i) * (p ** i) * ((1 - p) ** (n - i)) for i in range(k + 1))
+
+        return sum(comb(n, i) * (p**i) * ((1 - p) ** (n - i)) for i in range(k + 1))
 
     p_value = 2 * binom_cdf(k, n)
     return min(p_value, 1.0)
@@ -332,7 +354,9 @@ def paired_breakdown(results: list[TrialResult], mode_a: str, mode_b: str, group
     return groups
 
 
-def print_summary(results: list[TrialResult], eviction_modes: list[str], context_lengths: list[int], depths: list[float]):
+def print_summary(
+    results: list[TrialResult], eviction_modes: list[str], context_lengths: list[int], depths: list[float]
+):
     print("\n" + "=" * 72)
     print("Accuracy agregada (fração de acertos por combinação)")
     print("=" * 72)
@@ -348,7 +372,11 @@ def print_summary(results: list[TrialResult], eviction_modes: list[str], context
         for depth in depths:
             row = {}
             for eviction in eviction_modes:
-                subset = [r.correct for r in results if r.context_length == ctx_len and r.depth == depth and r.eviction == eviction]
+                subset = [
+                    r.correct
+                    for r in results
+                    if r.context_length == ctx_len and r.depth == depth and r.eviction == eviction
+                ]
                 row[eviction] = sum(subset) / len(subset) if subset else float("nan")
             line = f"{ctx_len:6d} {depth:6.2f}" + "".join(f"{row[m]:8.2f}" for m in eviction_modes)
             if len(eviction_modes) == 2:
@@ -380,22 +408,29 @@ def main():
     ap.add_argument("--repeats", type=int, default=3, help="Repetições por combinação")
     ap.add_argument("--min-p", type=float, default=0.05)
     ap.add_argument("--max-tokens", type=int, default=8, help="Tokens gerados na resposta (a agulha é curta)")
-    ap.add_argument("--timeout", type=int, default=DEFAULT_CLI_TIMEOUT_S, help="Timeout por chamada da CLI, em segundos")
+    ap.add_argument(
+        "--timeout", type=int, default=DEFAULT_CLI_TIMEOUT_S, help="Timeout por chamada da CLI, em segundos"
+    )
     ap.add_argument("--seed", type=int, default=1234)
     ap.add_argument("--mock", action="store_true", help="Roda sem chamar a CLI real, só valida o harness")
     ap.add_argument(
-        "--baseline-only", action="store_true",
+        "--baseline-only",
+        action="store_true",
         help="Roda só dentro da janela (sem evicção variável) pra medir retrieval cru do modelo antes do sweep completo",
     )
     ap.add_argument("--json", type=str, default=None, help="Caminho do JSON de saída (default automático por modo)")
     ap.add_argument(
-        "--prompt-style", choices=["continuation", "instruct"], default="continuation",
+        "--prompt-style",
+        choices=["continuation", "instruct"],
+        default="continuation",
         help="'continuation' (default) para checkpoints base; 'instruct' para checkpoints *-Instruct*",
     )
     ap.add_argument(
-        "--modes", type=str, default=None,
+        "--modes",
+        type=str,
+        default=None,
         help="Políticas de evicção separadas por vírgula (ex: 'fifo,nexus,nexus-salience'). "
-             "Default: fifo,nexus. Desenho pareado: cada prompt roda em TODAS as modas.",
+        "Default: fifo,nexus. Desenho pareado: cada prompt roda em TODAS as modas.",
     )
     args = ap.parse_args()
 
@@ -413,16 +448,17 @@ def main():
         eviction_modes = ["fifo"]  # dentro da janela, fifo == nexus (nada é evictado ainda)
         json_path = args.json or "ruler_baseline_results.json"
     else:
-        eviction_modes = (
-            [m.strip() for m in args.modes.split(",")] if args.modes else ["fifo", "nexus"]
+        eviction_modes = [m.strip() for m in args.modes.split(",")] if args.modes else ["fifo", "nexus"]
+        json_path = args.json or (
+            "ruler_eviction_results.json" if len(eviction_modes) == 2 else "ruler_multimode_results.json"
         )
-        json_path = args.json or ("ruler_eviction_results.json" if len(eviction_modes) == 2 else "ruler_multimode_results.json")
 
     results = run_sweep(args, eviction_modes)
     summary, overall = print_summary(results, eviction_modes, args.context_lengths, args.depths)
 
     if not args.baseline_only and len(eviction_modes) >= 2:
         from itertools import combinations
+
         print("\n" + "=" * 72)
         print("McNemar pareado por profundidade (mesmos prompts, todos os pares)")
         print("=" * 72)
@@ -476,11 +512,14 @@ def main():
 
     n_timeouts = sum(1 for r in results if r.timed_out)
     if n_timeouts:
-        print(f"\n[aviso] {n_timeouts}/{len(results)} trials bateram timeout ({args.timeout}s) — considere aumentar --timeout.")
+        print(
+            f"\n[aviso] {n_timeouts}/{len(results)} trials bateram timeout ({args.timeout}s) — considere aumentar --timeout."
+        )
 
     paired_json = None
     if not args.baseline_only and len(eviction_modes) >= 2:
         from itertools import combinations
+
         paired_json = {}
         for mode_a, mode_b in combinations(eviction_modes, 2):
             by_depth = paired_breakdown(results, mode_a, mode_b, group_key=lambda r: r.depth)
@@ -497,9 +536,14 @@ def main():
                 "paired_mcnemar": paired_json,
                 "raw": [
                     {
-                        "context_length": r.context_length, "depth": r.depth, "eviction": r.eviction,
-                        "correct": r.correct, "wall_s": round(r.wall_s, 3), "peak_rss_mb": r.peak_rss_mb,
-                        "timed_out": r.timed_out, "trial_id": r.trial_id,
+                        "context_length": r.context_length,
+                        "depth": r.depth,
+                        "eviction": r.eviction,
+                        "correct": r.correct,
+                        "wall_s": round(r.wall_s, 3),
+                        "peak_rss_mb": r.peak_rss_mb,
+                        "timed_out": r.timed_out,
+                        "trial_id": r.trial_id,
                     }
                     for r in results
                 ],

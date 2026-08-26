@@ -25,6 +25,7 @@ attention and memory are the foundations of →
 
 - [O que é](#o-que-é)
 - [Arquitetura do Cache](#arquitetura-do-cache)
+- [Políticas de Evicção](#políticas-de-evicção)
 - [Decisões de Design](#decisões-de-design)
 - [Modelos suportados](#modelos-suportados)
 - [Instalação](#instalação)
@@ -79,6 +80,31 @@ Little Hawk StreamingKVCache:
 ```
 
 **Position Freeze:** quando o cache satura, as posições RoPE congelam. Q permanece em `pos=512`, sink em `0..3`, janela em `4..511`. O modelo sempre "enxerga" uma janela de tamanho fixo no mesmo lugar do espaço posicional — sem drift de atenção.
+
+---
+
+## Políticas de Evicção
+
+A janela circular de 508 slots aceita três estratégias para escolher qual slot sobrescrever quando o cache satura (selecionável via `--eviction` no CLI ou `LITTLE_HAWK_EVICTION` na API):
+
+| Política | Score da vítima | Garantia | Custo |
+|---|---|---|---|
+| `fifo` *(default)* | recência pura (`win_ptr` circular) | últimos 508 tokens sempre presentes | zero |
+| `nexus` | EMA de atenção passada; protege sinks + cauda recente | experimental | +ε por step |
+| `nexus-salience` | `w_attn·EMA(atenção) + w_sal·surpresa-na-chegada` | experimental recomendado p/ recall | +GEMM `[T,V]` no prefill |
+
+**Por que `nexus-salience` existe:** atenção passada mede relevância *retrospectiva* — um token recém-chegado tem atenção zero por definição e é indistinguível de filler para o EMA. A surpresa `-log P(token|contexto)` está disponível no instante da chegada (o softmax do forward já a produz) e dá um "piso" de proteção que não decai por silêncio. Fatos estatisticamente raros (números, nomes incomuns) sobrevivem onde a recência não alcança.
+
+**Resultado validado** (needle-in-haystack pareado, 21 prompts, SmolLM-135M, McNemar exato — detalhes em [ANALISE.md §20](ANALISE.md)):
+
+| depth da agulha | fifo | nexus | nexus-salience |
+|---|---|---|---|
+| 0.10 (fora da janela FIFO) | 0.00 | 0.00 | **1.00** |
+| 0.50 | 0.71 | 0.00 | 0.86 |
+| 0.90 | 0.86 | 0.86 | 1.00 |
+| **TOTAL** | **0.52** | **0.29** | **0.95** |
+
+9/9 discordâncias pareadas a favor do salience (p=0.004). Limitação conhecida: surpresa captura fatos *estatisticamente* raros — um fato semanticamente crítico mas lexicalmente banal ("a reunião é na terça-feira") não gera sinal forte.
 
 ---
 
@@ -155,16 +181,21 @@ cd little-hawk
 python3 -m venv venv
 source venv/bin/activate
 
+# Core de inferência — sem nenhum framework web
 pip install numpy safetensors huggingface_hub tokenizers
 ```
 
 Alternativamente, instale localmente como pacote (modo editável):
 
 ```bash
-pip install -e .
-# com ferramentas de desenvolvimento:
-pip install -e ".[dev]"
+pip install -e .            # só o motor (sem FastAPI)
+pip install -e ".[api]"     # motor + servidor FastAPI
+pip install -e ".[dev]"     # + pytest, ruff, httpx (inclui [api])
+# com JIT numba opcional:
+pip install -e ".[jit]"
 ```
+
+> O motor (`engine/`, `runtime/`) não importa FastAPI/uvicorn — eles são extra `[api]`, usados apenas por `api/server.py`. "Sem frameworks" é literal para quem só roda `infer`/`transplant`.
 
 Os arquivos `.npz` e `_meta.json` gerados pelos transplants não são versionados (`.gitignore`). Cada usuário extrai localmente a partir dos modelos em cache do HuggingFace. O `_meta.json` embute o vocabulário do doador — encode/decode funciona sem cache HF.
 
@@ -240,6 +271,7 @@ Executa inferência com o modelo:
 --top-p         Nucleus sampling (padrão: 0.92)
 --rep-penalty   Penalidade de repetição (padrão: 1.15; 1.0 desativa)
 --min-p         Min-P sampling (padrão: 0.0 = desativado; 0.05–0.1 estabiliza gerações longas)
+--eviction      Política de evicção: fifo (default), nexus ou nexus-salience — ver [Políticas de Evicção](#políticas-de-evicção)
 --no-panel      Sem painel de telemetria em tempo real
 ```
 
@@ -473,14 +505,26 @@ python examples/demo.py
 
 ## Dependências
 
+**Core de inferência** (obrigatórias — zero frameworks):
+
 | Biblioteca | Para quê |
 |---|---|
 | `numpy` | Toda a álgebra linear |
 | `safetensors` | Leitura dos pesos do HuggingFace sem torch |
-| `huggingface_hub` | Download dos modelos |
+| `huggingface_hub` | Download dos modelos (só no transplant) |
 | `tokenizers` | BPE tokenizer Rust nativo |
 
-Nenhum PyTorch. Nenhuma GPU.
+**Extras opcionais:**
+
+| Extra | Bibliotecas | Para quê |
+|---|---|---|
+| `[api]` | `fastapi`, `uvicorn` | Servidor HTTP/SSE (`api/server.py`) |
+| `[dev]` | `pytest`, `ruff`, `httpx` (+`[api]`) | Testes e lint |
+| `[jit]` | `numba` | Kernels JIT opt-in (ganho ~0 em decode batch-1) |
+| `[onnx]` | `torch`, `onnx`, `onnxruntime` | Backend ONNX Runtime opt-in |
+| `[equiv]` | `torch`, `transformers` | Teste de equivalência numérica vs HF |
+
+Nenhum PyTorch. Nenhuma GPU. Nenhum framework web no core.
 
 ---
 

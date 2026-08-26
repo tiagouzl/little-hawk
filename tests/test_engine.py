@@ -291,9 +291,11 @@ class TestNexusSalience:
         from engine.engine import MultiLayerEngine
         import numpy as np
 
-        eng = MultiLayerEngine(d_model=128, n_heads=4, n_layers=2, sink_size=4,
-                               window_size=28, vocab_size=512, eviction="nexus-salience")
-        caches = eng.init_cache(); wp = 0
+        eng = MultiLayerEngine(
+            d_model=128, n_heads=4, n_layers=2, sink_size=4, window_size=28, vocab_size=512, eviction="nexus-salience"
+        )
+        caches = eng.init_cache()
+        wp = 0
         lg, caches, wp, _ = eng.prefill(list(range(20)), caches)
         assert eng.eviction.salience[1:20].sum() > 0, "prefill deve popular saliência"
         for n in range(21, 60):

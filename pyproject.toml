@@ -16,13 +16,13 @@ dependencies = [
     "safetensors",
     "huggingface_hub",
     "tokenizers",
-    "colorama",
-    "fastapi",
-    "uvicorn[standard]",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff", "httpx<0.28"]
+# Servidor FastAPI — o motor (engine/, runtime/) não importa nada daqui;
+# "Sem frameworks" vale literalmente para `infer`/`transplant`
+api = ["fastapi", "uvicorn[standard]"]
+dev = ["pytest", "ruff", "httpx<0.28", "fastapi", "uvicorn[standard]"]
 jit = ["numba>=0.58.0"]
 onnx = ["torch", "onnx", "onnxruntime"]
 # cython removido em 2026-08-24 — POC rejeitado (0.70×, §13-14 ANALISE.md); .pyx mantido como referência histórica

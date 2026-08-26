@@ -1,13 +1,14 @@
-# Fonte da verdade: pyproject.toml — este arquivo é compat legada para Docker/CI
-# Sincronizado com [project] dependencies + [project.optional-dependencies].dev
-# Alternativa moderna: `pip install -e .[dev]`
+# Fonte da verdade: pyproject.toml — este arquivo é compat para CI/Docker
+# Core de inferência (sem frameworks):
 numpy
 safetensors
 huggingface_hub
 tokenizers
-colorama
+# Bloco API — necessário aqui porque o CI roda test_api.py e o Docker serve
+# uvicorn api.server:app. Para instalar só o motor: `pip install -e .`
 fastapi
 uvicorn[standard]
+# Dev (testes/lint):
 pytest
 ruff
 httpx<0.28
