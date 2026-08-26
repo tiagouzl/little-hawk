@@ -624,3 +624,45 @@ step, a trilha reabre com aceitação já provada.
 **Veredito:** faixa 1.0–1.15× = neutro/sem valor operacional hoje. Trilha E
 ENCERRADA sem dívida: mecanismo correto, métricas E2 completas, caminho opt-in
 (`--speculative K`) preservado para reabertura com os custos atacados.
+
+## 22. Generalização do nexus-salience — formatos adversários NÃO comprimiram o ganho
+
+**Questão (§20.4):** o ganho do salience sobrevive quando a agulha é
+lexicalmente banal (surpresa baixa prevista), em vez de número aleatório?
+
+**Protocolo:** harness pareado idêntico ao §21.3, seed 777, ctx 512 (~934 toks),
+fifo vs nexus-salience, 4 reps × depths {0.1, 0.5} × 3 formatos de agulha:
+
+| Formato (surpresa esperada) | depth | fifo | salience | Δ |
+|---|---|---|---|---|
+| **number** (alta — controle) | 0.1 | 0.00 | 0.75 | +0.75 |
+| number | 0.5 | 0.50 | 0.75 | +0.25 |
+| **date** (baixa/moderada — adversário) | 0.1 | 0.00 | **1.00** | +1.00 |
+| date | 0.5 | 0.75 | 0.75 | 0.00 |
+| **word** (baixa — adversário) | 0.1 | 0.00 | **1.00** | +1.00 |
+| word | 0.5 | 1.00 | 1.00 | 0.00 |
+
+**Agregado depth 0.1 (o discriminante):** fifo 0/12 · salience **11/12**.
+O único miss foi no formato CONTROLE (number) — ruído de n pequeno, não padrão.
+
+**Resultado principal: a compressão prevista NÃO ocorreu.** A hipótese
+"palavras/datas banais não geram sinal de surpresa forte" falhou porque a
+surpresa relevante é **condicional ao contexto local**, não à frequência global:
+dentro de um filler que nunca menciona "terça-feira" ou "botão", esses tokens
+são tão improváveis quanto dígitos aleatórios. O piso de saliência mede
+improbabilidade *no contexto*, e o contexto é o que define raridade.
+
+**Implicação:** para construir um adversário real do salience seria preciso uma
+agulha composta de tokens frequentes NO PRÓPRIO filler (ex.: segredo = "tarde",
+presente em todas as sentenças de enchimento) — ambiguidade de extração seria o
+novo problema. Isso delimita melhor a fronteira da técnica: ela protege o que é
+raro *relativo ao contexto*, e degrada quando o "segredo" é estatisticamente
+indistinguível do enchimento por construção.
+
+**Caveats:** n=4/célula (McNemar p=0.125 nos blocos — direção unânime, potência
+baixa); 1 checkpoint; word format foi o mais fácil para ambas as políticas
+(ambas 100% em 0.5).
+
+**Veredito:** generalização CONFIRMADA nos formatos testados, incluindo os
+dois desenhados como adversários. `nexus-salience` permanece experimental
+recomendado para recall-heavy; FIFO default por custo zero.
