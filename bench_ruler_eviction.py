@@ -95,47 +95,62 @@ class TrialResult:
     trial_id: int = 0  # identifica prompts idênticos entre modos de evicção (desenho pareado)
 
 
-def build_prompt(context_length: int, depth: float, rng: random.Random, style: str = "continuation") -> tuple[str, str]:
-    """
-    Monta um prompt de ~context_length tokens (aprox. por palavras) com
-    uma agulha (número mágico) inserida na profundidade `depth` (0.0 a 1.0).
-    Retorna (prompt, magic_number_esperado).
+SECRET_WORDS = ["janela", "colmeia", "harpa", "tigela", "botão", "espinha", "fivela"]
+WEEKDAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira"]
 
-    style="continuation" (default, recomendado para checkpoints BASE, sem
-    instruction-tuning): a agulha aparece uma vez no meio do texto, e o
-    prompt termina com o MESMO prefixo da frase-agulha, cortado antes do
-    número — um checkpoint base tende a completar naturalmente pela
-    estatística de repetição de padrão, sem precisar entender uma
-    instrução tipo "responda a pergunta".
+# prefixos por formato — a continuação termina exatamente com eles (estilo continuation)
+NEEDLE_SPECS = {
+    "number": {"prefix": "O número mágico secreto para esta tarefa é",
+               "choices": None,  # aleatório 6 dígitos
+               "pattern": r"\b(\d{6})\b"},
+    "date":   {"prefix": "O dia marcado em segredo para esta tarefa é",
+               "choices": WEEKDAYS,
+               "pattern": "(" + "|".join(WEEKDAYS) + ")"},
+    "word":   {"prefix": "A palavra secreta combinada para esta tarefa é",
+               "choices": SECRET_WORDS,
+               "pattern": "(" + "|".join(SECRET_WORDS) + ")"},
+}
 
-    style="instruct": formato pergunta/resposta explícito (funciona bem
-    com checkpoints *-Instruct*; em checkpoints base tende a gerar
-    continuação de texto solta em vez de responder — ver diagnóstico do
-    raw_output).
+
+def build_prompt(context_length: int, depth: float, rng: random.Random,
+                 style: str = "continuation", fmt: str = "number") -> tuple[str, str]:
     """
-    magic_number = str(rng.randint(100000, 999999))
-    n_words_target = int(context_length / 1.3)  # aprox. 1.3 tokens/palavra em pt-BR
+    Monta um prompt de ~context_length tokens com uma agulha na profundidade `depth`.
+    Retorna (prompt, segredo_esperado).
+
+    fmt controla a SURPRESA LEXICAL da agulha (§20.4 do ANALISE):
+      - "number": 6 dígitos aleatórios → surpresa ALTA (caso ideal do salience)
+      - "date":   dia da semana comum  → surpresa baixa/moderada (adversário)
+      - "word":   palavra banal fora do filler → surpresa baixa (adversário)
+
+    style="continuation" termina o prompt com o MESMO prefixo da frase-agulha
+    (cortado antes do segredo) para checkpoints base; "instruct" pergunta direto.
+    """
+    spec = NEEDLE_SPECS[fmt]
+    secret = str(rng.randint(100000, 999999)) if spec["choices"] is None else rng.choice(spec["choices"])
+    n_words_target = int(context_length / 1.3)
     needle_word_pos = int(n_words_target * depth)
 
     words: list[str] = []
     while len(words) < n_words_target:
         words.extend(rng.choice(FILLER_SENTENCES).split())
 
-    needle_prefix = "O número mágico secreto para esta tarefa é"
-    needle_sentence = f"{needle_prefix} {magic_number}. Lembre-se dele.".split()
-
+    needle_sentence = f"{spec['prefix']} {secret}. Lembre-se dele.".split()
     insertion_point = min(needle_word_pos, len(words))
     full = words[:insertion_point] + needle_sentence + words[insertion_point:n_words_target]
 
     if style == "continuation":
-        # Termina com o mesmo prefixo, sem o número — o modelo completa.
-        prompt = " ".join(full) + f"\n\n{needle_prefix}"
+        prompt = " ".join(full) + f"\n\n{spec['prefix']}"
     else:
-        prompt = (
-            " ".join(full)
-            + "\n\nPergunta: qual é o número mágico secreto mencionado acima? Responda apenas com o número."
-        )
-    return prompt, magic_number
+        prompt = " ".join(full) + "\n\nPergunta: qual era o segredo mencionado acima? Responda apenas com ele."
+    return prompt, secret
+
+
+def extract_answer(text: str, fmt: str = "number") -> str | None:
+    """Última ocorrência do padrão do formato — a resposta vem no fim."""
+    pattern = NEEDLE_SPECS[fmt]["pattern"]
+    matches = re.findall(pattern, text)
+    return matches[-1] if matches else None
 
 
 def run_cli(
@@ -220,25 +235,20 @@ def run_cli(
     return stdout, wall_s, peak_rss, timed_out
 
 
-def run_mock(prompt: str, eviction: str, magic_number: str, context_length: int, rng: random.Random) -> str:
+def run_mock(prompt: str, eviction: str, secret: str, context_length: int,
+             rng: random.Random, fmt: str = "number") -> str:
     """Simula respostas plausíveis pra validar a lógica do harness sem pesos reais."""
     overflow = max(0, context_length - 512)
     if eviction == "fifo":
         p_correct = max(0.05, 1.0 - overflow / 800)
     else:  # nexus
         p_correct = max(0.15, 1.0 - overflow / 1800)
-    return magic_number if rng.random() < p_correct else str(rng.randint(100000, 999999))
-
-
-def extract_number(text: str) -> str | None:
-    """
-    Pega o ÚLTIMO número de 6 dígitos na saída, não o primeiro — se a CLI
-    ecoar o prompt antes da resposta (mesmo com --no-panel), o primeiro
-    match pode ser lixo de outro lugar (ex: win_ptr/step nos logs). A
-    resposta do modelo é o que vem por último.
-    """
-    matches = re.findall(r"\b(\d{6})\b", text)
-    return matches[-1] if matches else None
+    if rng.random() < p_correct:
+        return secret
+    spec = NEEDLE_SPECS[fmt]
+    if spec["choices"] is None:
+        return str(rng.randint(100000, 999999))
+    return rng.choice([c for c in spec["choices"] if c != secret] or spec["choices"])
 
 
 def run_sweep(args, eviction_modes: list[str]) -> list[TrialResult]:
@@ -261,13 +271,13 @@ def run_sweep(args, eviction_modes: list[str]) -> list[TrialResult]:
         for depth in args.depths:
             for rep in range(args.repeats):
                 # Prompt gerado UMA vez, reaplicado a cada modo de evicção.
-                prompt, magic_number = build_prompt(ctx_len, depth, rng, style=args.prompt_style)
+                prompt, magic_number = build_prompt(ctx_len, depth, rng, style=args.prompt_style, fmt=args.needle_format)
                 trial_id += 1
 
                 for eviction in eviction_modes:
                     if args.mock:
                         t0 = time.perf_counter()
-                        output = run_mock(prompt, eviction, magic_number, ctx_len, rng)
+                        output = run_mock(prompt, eviction, magic_number, ctx_len, rng, fmt=args.needle_format)
                         wall_s = time.perf_counter() - t0
                         peak_rss, timed_out = None, False
                     else:
@@ -282,7 +292,7 @@ def run_sweep(args, eviction_modes: list[str]) -> list[TrialResult]:
                             [],
                         )
 
-                    answered = extract_number(output)
+                    answered = extract_answer(output, args.needle_format)
                     correct = (answered == magic_number) and not timed_out
                     results.append(
                         TrialResult(ctx_len, depth, eviction, correct, wall_s, peak_rss, timed_out, output, trial_id)
@@ -420,6 +430,12 @@ def main():
     )
     ap.add_argument("--json", type=str, default=None, help="Caminho do JSON de saída (default automático por modo)")
     ap.add_argument(
+        "--needle-format",
+        choices=list(NEEDLE_SPECS.keys()),
+        default="number",
+        help="Tipo de agulha: number (surpresa alta), date/word (lexicalmente banais — adversários do salience)",
+    )
+    ap.add_argument(
         "--prompt-style",
         choices=["continuation", "instruct"],
         default="continuation",
@@ -502,11 +518,12 @@ def main():
         else:
             print("=> Baseline aceitável — agora o sweep completo (sem --baseline-only) é informativo.")
     else:
-        delta = overall["nexus"] - overall["fifo"]
+        mode_a, mode_b = eviction_modes[0], eviction_modes[-1]
+        delta = overall[mode_b] - overall[mode_a]
         if delta > 0:
-            print(f"\n=> Nexus supera FIFO em {delta * 100:.1f} p.p. de accuracy geral.")
+            print(f"\n=> {mode_b} supera {mode_a} em {delta * 100:.1f} p.p. de accuracy geral.")
         elif delta < 0:
-            print(f"\n=> FIFO supera Nexus em {-delta * 100:.1f} p.p. — revisar alpha/R do Nexus.")
+            print(f"\n=> {mode_a} supera {mode_b} em {-delta * 100:.1f} p.p. — revisar parâmetros de {mode_b}.")
         else:
             print("\n=> Empate — sem diferença mensurável neste conjunto de testes.")
 
