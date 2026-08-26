@@ -58,6 +58,7 @@ import subprocess
 import sys
 import threading
 import time
+import unicodedata
 from dataclasses import dataclass, field
 
 try:
@@ -156,6 +157,13 @@ def build_prompt(
 def extract_answer(text: str, fmt: str = "number") -> str | None:
     """Última ocorrência do padrão do formato — a resposta vem no fim."""
     pattern = NEEDLE_SPECS[fmt]["pattern"]
+    if fmt in ("date", "word"):
+        text = unicodedata.normalize("NFC", text)
+        matches = re.findall(pattern, text, flags=re.IGNORECASE)
+        if matches:
+            # normaliza retorno para comparar com secret lower/NFC
+            return unicodedata.normalize("NFC", matches[-1].lower())
+        return None
     matches = re.findall(pattern, text)
     return matches[-1] if matches else None
 
