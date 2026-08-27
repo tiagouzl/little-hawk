@@ -1,0 +1,105 @@
+{
+  "mode": "full_sweep",
+  "config": {
+    "weights": "little_hawk_weights.npz",
+    "cli_module": "cli.main",
+    "context_lengths": [
+      600
+    ],
+    "depths": [
+      0.1
+    ],
+    "repeats": 2,
+    "min_p": 0.05,
+    "max_tokens": 8,
+    "timeout": 300,
+    "seed": 99,
+    "mock": false,
+    "baseline_only": false,
+    "json": "ruler_smollm_extra_reps.json",
+    "needle_format": "number",
+    "prompt_style": "continuation",
+    "modes": "fifo,nexus-salience"
+  },
+  "summary": [
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "fifo": 0.0,
+      "nexus-salience": 1.0,
+      "delta": 1.0
+    }
+  ],
+  "overall": {
+    "fifo": 0,
+    "nexus-salience": 1
+  },
+  "paired_mcnemar": {
+    "fifo_vs_nexus-salience": {
+      "by_depth": {
+        "0.1": {
+          "n": 2,
+          "a_correct": 0,
+          "b_correct": 2,
+          "b_only": 0,
+          "c_only": 2,
+          "acc_a": 0.0,
+          "acc_b": 1.0,
+          "mcnemar_p": 0.5
+        }
+      },
+      "overall": {
+        "n": 2,
+        "a_correct": 0,
+        "b_correct": 2,
+        "b_only": 0,
+        "c_only": 2,
+        "acc_a": 0.0,
+        "acc_b": 1.0,
+        "mcnemar_p": 0.5
+      }
+    }
+  },
+  "raw": [
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 140.463,
+      "peak_rss_mb": 1370.68359375,
+      "timed_out": false,
+      "trial_id": 1
+    },
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 142.235,
+      "peak_rss_mb": 1407.02734375,
+      "timed_out": false,
+      "trial_id": 1
+    },
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 184.269,
+      "peak_rss_mb": 1431.72265625,
+      "timed_out": false,
+      "trial_id": 2
+    },
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 190.115,
+      "peak_rss_mb": 1470.15625,
+      "timed_out": false,
+      "trial_id": 2
+    }
+  ]
+}
