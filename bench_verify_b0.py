@@ -14,6 +14,7 @@ NENHUMA alteração em código de produção.
 
 Protocolo B0 (PARECER_ROADMAP): medir primeiro, depois decidir.
 """
+
 import json
 import math
 import os
@@ -59,8 +60,7 @@ def setup_engine_and_cache(n_ctx_target=600):
     return eng, caches, win_ptr, n_ctx_target
 
 
-def bench_component_stationary(eng, layer, caches_li, cand_slots, kk, vv,
-                                pos_q, pos_sink, rankings, k, inv_freq):
+def bench_component_stationary(eng, layer, caches_li, cand_slots, kk, vv, pos_q, pos_sink, rankings, k, inv_freq):
     """
     Mede os componentes DA CAMADA no branch stationary, exatamente como
     o loop j=0..k-1 em verify_chunk faz.
@@ -70,8 +70,20 @@ def bench_component_stationary(eng, layer, caches_li, cand_slots, kk, vv,
     S, W, max_cap = eng.S, eng.W, eng.max_cap
     d_k = layer.d_k
 
-    times = {c: 0 for c in ["rms_norm", "qkv_proj", "rope_q", "rope_k",
-                              "qk_score", "softmax", "av_out", "proj_out", "write_cache"]}
+    times = {
+        c: 0
+        for c in [
+            "rms_norm",
+            "qkv_proj",
+            "rope_q",
+            "rope_k",
+            "qk_score",
+            "softmax",
+            "av_out",
+            "proj_out",
+            "write_cache",
+        ]
+    }
 
     # ── rms_norm ──
     t0 = time.perf_counter_ns()
@@ -91,17 +103,17 @@ def bench_component_stationary(eng, layer, caches_li, cand_slots, kk, vv,
 
         # ── write_cache (kc write) ──
         t0 = time.perf_counter_ns()
-        kc[:, :, cand_slots[j]:cand_slots[j]+1, :] = kk[:, :, j:j+1, :]
+        kc[:, :, cand_slots[j] : cand_slots[j] + 1, :] = kk[:, :, j : j + 1, :]
         times["write_cache"] += time.perf_counter_ns() - t0
 
         # ── write valor ──
         v_win_copy = v_win.copy()
-        v_win_copy[:, :, si:si+1, :] = vv[:, :, j:j+1, :]
+        v_win_copy[:, :, si : si + 1, :] = vv[:, :, j : j + 1, :]
 
         # ── rope_q (1 query) ──
-        qr_j_input = kk[:, :, j:j+1, :]  # dummy: shape [1,1,H,d_k] — na verdade q[:,j:j+1]
+        qr_j_input = kk[:, :, j : j + 1, :]  # dummy: shape [1,1,H,d_k] — na verdade q[:,j:j+1]
         t0 = time.perf_counter_ns()
-        qr_j = _rope_numpy(qr_j_input, pos_q[j:j+1], inv_freq)
+        qr_j = _rope_numpy(qr_j_input, pos_q[j : j + 1], inv_freq)
         times["rope_q"] += time.perf_counter_ns() - t0
 
         # ── rope_k (S+W keys) ──
@@ -131,7 +143,7 @@ def bench_component_stationary(eng, layer, caches_li, cand_slots, kk, vv,
 
     # ── av_out (k queries) ──
     t0 = time.perf_counter_ns()
-    out_rows = [at[:, :, j:j+1, :] @ v_rows[j] for j in range(k)]
+    out_rows = [at[:, :, j : j + 1, :] @ v_rows[j] for j in range(k)]
     times["av_out"] += time.perf_counter_ns() - t0
 
     return times
@@ -154,9 +166,22 @@ def bench_verify_chunk_instrumented(eng, tokens, caches, win_ptr, n_ctx, k):
     pos_q = np.full(k, max_cap - 1, dtype=np.int64)
     rankings = [(eng.wbi + win_ptr + j + 1) % W + S for j in range(k)]
 
-    totals = {c: 0 for c in ["rms_norm", "qkv_proj", "reshape_transpose",
-                               "rope_q", "rope_k", "qk_score", "softmax",
-                               "av_out", "proj_out", "ffn", "write_cache"]}
+    totals = {
+        c: 0
+        for c in [
+            "rms_norm",
+            "qkv_proj",
+            "reshape_transpose",
+            "rope_q",
+            "rope_k",
+            "qk_score",
+            "softmax",
+            "av_out",
+            "proj_out",
+            "ffn",
+            "write_cache",
+        ]
+    }
 
     for li, layer in enumerate(eng.layers):
         kc, vc = caches[li]
@@ -195,13 +220,13 @@ def bench_verify_chunk_instrumented(eng, tokens, caches, win_ptr, n_ctx, k):
 
             # ── write_cache (key + value para slot candidato) ──
             t0 = time.perf_counter_ns()
-            kc[:, :, cand_slots[j]:cand_slots[j]+1, :] = kk[:, :, j:j+1, :]
-            v_win[:, :, si:si+1, :] = vv[:, :, j:j+1, :]
+            kc[:, :, cand_slots[j] : cand_slots[j] + 1, :] = kk[:, :, j : j + 1, :]
+            v_win[:, :, si : si + 1, :] = vv[:, :, j : j + 1, :]
             totals["write_cache"] += time.perf_counter_ns() - t0
 
             # ── rope_q (1 query, posição congelada) ──
             t0 = time.perf_counter_ns()
-            qr_j = _rope_numpy(q[:, :, j:j+1, :], pos_q[j:j+1], eng.inv_freq)
+            qr_j = _rope_numpy(q[:, :, j : j + 1, :], pos_q[j : j + 1], eng.inv_freq)
             totals["rope_q"] += time.perf_counter_ns() - t0
 
             # ── rope_k (S+W keys da janela) ──
@@ -229,7 +254,7 @@ def bench_verify_chunk_instrumented(eng, tokens, caches, win_ptr, n_ctx, k):
 
         # ── av_out: k individual matmuls + concat + proj_out ──
         t0 = time.perf_counter_ns()
-        out_rows = [at[:, :, j:j+1, :] @ v_rows[j] for j in range(k)]
+        out_rows = [at[:, :, j : j + 1, :] @ v_rows[j] for j in range(k)]
         out = np.concatenate(out_rows, axis=2).transpose(0, 2, 1, 3).reshape(1, k, eng.d_model) @ layer.W_o
         totals["av_out"] += time.perf_counter_ns() - t0
 
@@ -337,8 +362,7 @@ def main():
             "verify_iqr": [iqr_ver_lo, iqr_ver_hi],
             "ratio": ratio,
             "components_ms": {cn: comp_medians[cn] / 1e6 for cn in comp_names},
-            "components_pct": {cn: (comp_medians[cn] / total_ns * 100) if total_ns > 0 else 0
-                               for cn in comp_names},
+            "components_pct": {cn: (comp_medians[cn] / total_ns * 100) if total_ns > 0 else 0 for cn in comp_names},
         }
 
     # ── Tabela resumo ──
@@ -350,9 +374,11 @@ def main():
     print("-" * len(header))
     for k in KS:
         r = results[k]
-        print(f"{k:3d} | {r['step_ms']:10.3f} ±{r['step_iqr'][1]-r['step_iqr'][0]:5.3f}"
-              f" | {r['verify_ms']:10.3f} ±{r['verify_iqr'][1]-r['verify_iqr'][0]:5.3f}"
-              f" | {r['ratio']:6.3f}×")
+        print(
+            f"{k:3d} | {r['step_ms']:10.3f} ±{r['step_iqr'][1] - r['step_iqr'][0]:5.3f}"
+            f" | {r['verify_ms']:10.3f} ±{r['verify_iqr'][1] - r['verify_iqr'][0]:5.3f}"
+            f" | {r['ratio']:6.3f}×"
+        )
 
     # ── Percentual por componente (k=4 = baseline do 1.90×) ──
     print()
