@@ -1,0 +1,165 @@
+{
+  "mode": "full_sweep",
+  "config": {
+    "weights": "little_hawk_weights.npz",
+    "cli_module": "cli.main",
+    "context_lengths": [
+      600
+    ],
+    "depths": [
+      0.1
+    ],
+    "repeats": 5,
+    "min_p": 0.05,
+    "max_tokens": 8,
+    "timeout": 200,
+    "seed": 42,
+    "mock": false,
+    "baseline_only": false,
+    "json": "ruler_gen_date_fixed.json",
+    "needle_format": "date",
+    "prompt_style": "continuation",
+    "modes": "fifo,nexus-salience"
+  },
+  "summary": [
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "fifo": 0.0,
+      "nexus-salience": 1.0,
+      "delta": 1.0
+    }
+  ],
+  "overall": {
+    "fifo": 0,
+    "nexus-salience": 1
+  },
+  "paired_mcnemar": {
+    "fifo_vs_nexus-salience": {
+      "by_depth": {
+        "0.1": {
+          "n": 5,
+          "a_correct": 0,
+          "b_correct": 5,
+          "b_only": 0,
+          "c_only": 5,
+          "acc_a": 0.0,
+          "acc_b": 1.0,
+          "mcnemar_p": 0.0625
+        }
+      },
+      "overall": {
+        "n": 5,
+        "a_correct": 0,
+        "b_correct": 5,
+        "b_only": 0,
+        "c_only": 5,
+        "acc_a": 0.0,
+        "acc_b": 1.0,
+        "mcnemar_p": 0.0625
+      }
+    }
+  },
+  "raw": [
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 138.412,
+      "peak_rss_mb": 1426.41796875,
+      "timed_out": false,
+      "trial_id": 1
+    },
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 145.956,
+      "peak_rss_mb": 1427.4609375,
+      "timed_out": false,
+      "trial_id": 1
+    },
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 140.053,
+      "peak_rss_mb": 1451.1875,
+      "timed_out": false,
+      "trial_id": 2
+    },
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 171.138,
+      "peak_rss_mb": 1400.5390625,
+      "timed_out": false,
+      "trial_id": 2
+    },
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 172.425,
+      "peak_rss_mb": 1461.00390625,
+      "timed_out": false,
+      "trial_id": 3
+    },
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 183.974,
+      "peak_rss_mb": 1427.00390625,
+      "timed_out": false,
+      "trial_id": 3
+    },
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 194.295,
+      "peak_rss_mb": 1435.453125,
+      "timed_out": false,
+      "trial_id": 4
+    },
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 188.231,
+      "peak_rss_mb": 1476.96875,
+      "timed_out": false,
+      "trial_id": 4
+    },
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "fifo",
+      "correct": false,
+      "wall_s": 185.272,
+      "peak_rss_mb": 1474.0234375,
+      "timed_out": false,
+      "trial_id": 5
+    },
+    {
+      "context_length": 600,
+      "depth": 0.1,
+      "eviction": "nexus-salience",
+      "correct": true,
+      "wall_s": 196.615,
+      "peak_rss_mb": 1443.90234375,
+      "timed_out": false,
+      "trial_id": 5
+    }
+  ]
+}
