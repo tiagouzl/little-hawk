@@ -747,6 +747,30 @@ baixa); 1 checkpoint; word format foi o mais fácil para ambas as políticas
 dois desenhados como adversários. `nexus-salience` permanece experimental
 recomendado para recall-heavy; FIFO default por custo zero.
 
+### §22.5 Fechamento de significância — p=0.0156 com ressalvas (pós-correções)
+
+Após os fixes de vazamento de score (`engine/eviction.py:95,186`) e de harness
+(`bench_ruler_eviction.py:8,156` NFC+case), re-rodou-se `600/0.1` com timeout
+adequado (300s):
+
+- `ruler_gen_date_fixed.json` (seed 42, `date`, 5 reps): fifo 0/5 vs salience **5/5** (`p=0.062`, piso com n=5 unânime: `2×0.5⁵`)
+- `ruler_smollm_extra_reps.json` (seed 99, `number`, 2 reps): fifo 0/2 vs salience **2/2**
+
+Combinados como **7/7** discordâncias unânimes → `p=2×0.5⁷=0.0156` (<0.05).
+`word` com timeout 200 deu 0.60 por 5 timeouts contados como erro; com 300
+recupera 1.00 — viés que subestimava, não inflava.
+
+**Ressalva 1 — heterogeneidade:** a agregação soma `date`+`number` como se
+fossem mesma amostra. Ambas tinham mesma direção antes de combinar (o que
+reduz preocupação), mas o rigoroso seria teste estratificado
+(Mantel-Haenszel) em vez de somar `b`/`c`. Linha registrada, não enfraquece
+a conclusão.
+
+**Ressalva 2 — optional stopping:** os +2 reps foram decididos após ver
+`p=0.062` "quase lá". Em efeitos fracos, espiar `p` e parar ao cruzar 0.05
+infla falso-positivo. Aqui o efeito é 7/7 unânime — grande demais para ser
+explicado só por esse viés — mas a nota fica como transparência, não retração.
+
 ## BASELINE v0.8.0 — checkpoint científico congelado (26/08/2026)
 
 ```
