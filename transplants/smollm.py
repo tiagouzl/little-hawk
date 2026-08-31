@@ -40,8 +40,11 @@ def hdr(s): print(f"\n{BOLD}{s}{RESET}\n{DIM}{'─'*58}{RESET}")
 MODEL_CONFIGS={
     "smollm-135m":  {"id":"HuggingFaceTB/SmolLM-135M",  "d_model":576, "inter":1536, "n_heads":9,  "n_kv":3,  "n_layers":30, "vocab":49152, "rope":10000.0},
     "smollm2-135m": {"id":"HuggingFaceTB/SmolLM2-135M", "d_model":576, "inter":1536, "n_heads":9,  "n_kv":3,  "n_layers":30, "vocab":49152, "rope":100000.0},
+    "smollm2-135m-instruct": {"id":"HuggingFaceTB/SmolLM2-135M-Instruct", "d_model":576, "inter":1536, "n_heads":9,  "n_kv":3,  "n_layers":30, "vocab":49152, "rope":100000.0},
     "smollm2-360m": {"id":"HuggingFaceTB/SmolLM2-360M", "d_model":960, "inter":2560, "n_heads":15, "n_kv":5,  "n_layers":32, "vocab":49152, "rope":100000.0},
+    "smollm2-360m-instruct": {"id":"HuggingFaceTB/SmolLM2-360M-Instruct", "d_model":960, "inter":2560, "n_heads":15, "n_kv":5,  "n_layers":32, "vocab":49152, "rope":100000.0},
     "smollm2-1.7b": {"id":"HuggingFaceTB/SmolLM2-1.7B", "d_model":2048,"inter":8192, "n_heads":32, "n_kv":32, "n_layers":24, "vocab":49152, "rope":130000.0},
+    "smollm2-1.7b-instruct": {"id":"HuggingFaceTB/SmolLM2-1.7B-Instruct", "d_model":2048,"inter":8192, "n_heads":32, "n_kv":32, "n_layers":24, "vocab":49152, "rope":130000.0},
 }
 DEFAULT_MODEL="smollm-135m"
 # Compatibilidade: expõe constantes do modelo padrão para importadores antigos
