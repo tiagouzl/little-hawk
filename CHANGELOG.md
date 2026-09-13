@@ -2,6 +2,18 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [Unreleased]
+
+### ✨ Novos
+- CLI: subcomando `chat` — modo interativo contínuo (`sair`/`exit`/`quit` encerra).
+- Docs: `CONTRIBUTING.md` + link no README; README cobre `chat`, corrige números do hero e TOC.
+
+### 🔧 Correções e refactors
+- API: geração via `ThreadPoolExecutor` reutilizado (antes: `Thread` por request); aguarda término no cancel; `/health` expõe `max_concurrency`/`timeout_secs` (+3 testes).
+- Engine: `attn_step` fatiado em `_project_qkv`/`_write_cache`/`_compute_context`/`_attend` (sem mudança de comportamento).
+- Docker: usuário non-root (`appuser`) + `HEALTHCHECK` em `/health`.
+- Transplants: `download_vocab(MODEL_ID)` explícito; reparado `qwen.py` corrompido (bloco colado 8x) e restaurado `expand_gqa` ainda em uso.
+
 ## [0.8.0] - 2026-08-26
 
 ### 🧬 Transplants SmolLM2 (135M / 360M / 1.7B)
