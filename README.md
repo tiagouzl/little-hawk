@@ -16,7 +16,7 @@ attention and memory are the foundations of →
   the ability to remember things.
   memory is a part of the brain and memory...
 
-30 camadas · 112ms/token · CPU · 8GB RAM · zero evicções
+30 camadas · ~134ms/token (enchimento) / ~249ms/token (estacionária) · CPU · 8GB RAM · zero evicções
 ```
 
 ---
@@ -32,6 +32,7 @@ attention and memory are the foundations of →
 - [Uso rápido](#uso-rápido)
 - [Comandos CLI](#comandos-cli)
 - [API FastAPI](#api-fastapi-servidor-opcional)
+- [Benchmarks](#benchmarks)
 - [Docker](#docker)
 - [Telemetria em tempo real](#telemetria-em-tempo-real)
 - [Testes](#testes)
@@ -197,7 +198,7 @@ pip install -e ".[jit]"
 
 > O motor (`engine/`, `runtime/`) não importa FastAPI/uvicorn — eles são extra `[api]`, usados apenas por `api/server.py`. "Sem frameworks" é literal para quem só roda `infer`/`transplant`.
 
-Os arquivos `.npz` e `_meta.json` gerados pelos transplants não são versionados (`.gitignore`). Cada usuário extrai localmente a partir dos modelos em cache do HuggingFace. O `_meta.json` embute o vocabulário do doador — encode/decode funciona sem cache HF.
+Os arquivos `.npz` gerados pelos transplants não são versionados (`*.npz` no `.gitignore`). Os `_meta.json` (vocabulário do doador) são versionados. Cada usuário extrai o `.npz` localmente a partir dos modelos em cache do HuggingFace. O `_meta.json` embute o vocabulário do doador — encode/decode funciona sem cache HF.
 
 ---
 
@@ -485,7 +486,7 @@ little-hawk/
 └── README.md
 ```
 
-## Scripts utilitários
+### Scripts utilitários
 
 Baixe pesos de um modelo HuggingFace:
 
@@ -493,7 +494,7 @@ Baixe pesos de um modelo HuggingFace:
 python scripts/download_weights.py <repo_id> <filename>
 ```
 
-## Exemplos
+### Exemplos
 
 Execute um exemplo de inferência:
 
@@ -576,7 +577,7 @@ Contribuições são muito bem-vindas! Para colaborar com o Little Hawk:
 4. Garanta que o código está limpo rodando `ruff check .` e `pytest`
 5. Abra um Pull Request explicando sua motivação e mudanças
 
-Sugestões, issues e discussões são incentivadas! Veja também o arquivo [CONTRIBUTING.md](CONTRIBUTING.md) se disponível.
+Sugestões, issues e discussões são incentivadas!
 
 ---
 
