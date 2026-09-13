@@ -276,6 +276,16 @@ Executa inferência com o modelo:
 --no-panel      Sem painel de telemetria em tempo real
 ```
 
+### Subcomando `chat`
+
+Modo interativo / chat contínuo (mesmas opções de sampling do `infer`, sem `--prompt`):
+
+```bash
+python little_hawk_cli.py chat --weights little_hawk_weights.npz
+```
+
+Digite `sair`, `exit` ou `quit` para encerrar.
+
 ### Subcomando `transplant`
 
 Transplanta pesos de modelo HuggingFace:
