@@ -66,7 +66,7 @@ def download_file(filename, cache_dir=None):
     print(ok(f"{filename}  ({mb:.0f} MB)"))
     return path
 
-def download_vocab():
+def download_vocab(MODEL_ID):
     """Baixa tokenizer.json e extrai o vocabulário token→id."""
     from huggingface_hub import hf_hub_download
     print(inf("Baixando tokenizer.json..."))
@@ -246,7 +246,7 @@ def extract(st_paths, n_layers, output, cache_dir=None):
     # ── Meta JSON ─────────────────────────────────────────────────────────────
     hdr(f"Salvando {output}")
     # Vocabulário embutido no meta — garante encode/decode sem cache HF
-    vocab = download_vocab()
+    vocab = download_vocab(MODEL_ID)
     meta_path = output.replace(".npz", "_meta.json")
     meta = {
         "donor":       MODEL_ID,
