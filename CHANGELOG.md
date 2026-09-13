@@ -2,7 +2,7 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
-## [Unreleased]
+## [0.9.0] - 2026-09-13
 
 ### ✨ Novos
 - CLI: subcomando `chat` — modo interativo contínuo (`sair`/`exit`/`quit` encerra).
