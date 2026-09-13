@@ -11,7 +11,7 @@ from pathlib import Path
 # Adicionar diretório raiz ao path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from utils import BANNER, CYAN, GREEN, RED, RESET, YELLOW
+from utils import BANNER, BOLD, CYAN, GREEN, RED, RESET, YELLOW
 from runtime.tokenizer import BPETokenizer, CORPUS
 from engine import MultiLayerEngine, get_engine, is_onnx_enabled
 from runtime.inference import LittleHawkInference, SamplingConfig, ConsoleTelemetry
@@ -71,6 +71,29 @@ Exemplos:
         help="N-gram speculative decoding greedy com k rascunhos (0=off; FIFO only)",
     )
 
+    # Subcomando chat (interativo)
+    chat_parser = subparsers.add_parser("chat", help="Modo interativo / chat contínuo")
+    chat_parser.add_argument("--weights", type=str, default="little_hawk_weights.npz", help="Caminho para arquivo .npz")
+    chat_parser.add_argument("--max-tokens", type=int, default=DEFAULT_INFERENCE_CONFIG["max_tokens"])
+    chat_parser.add_argument("--temperature", type=float, default=DEFAULT_INFERENCE_CONFIG["temperature"])
+    chat_parser.add_argument("--top-k", type=int, default=DEFAULT_INFERENCE_CONFIG["top_k"])
+    chat_parser.add_argument("--top-p", type=float, default=DEFAULT_INFERENCE_CONFIG["top_p"])
+    chat_parser.add_argument("--rep-penalty", type=float, default=DEFAULT_INFERENCE_CONFIG["rep_penalty"])
+    chat_parser.add_argument(
+        "--min-p",
+        type=float,
+        default=DEFAULT_INFERENCE_CONFIG.get("min_p", 0.0),
+        help="Min-P sampling (0 desativa; 0.05-0.1 estabiliza gerações longas)",
+    )
+    chat_parser.add_argument(
+        "--eviction",
+        type=str,
+        default=os.getenv("LITTLE_HAWK_EVICTION", "fifo"),
+        choices=["fifo", "nexus", "nexus-salience"],
+        help="Política de evicção",
+    )
+    chat_parser.add_argument("--no-panel", action="store_true", help="Sem painel de telemetria")
+
     # Subcomando transplant
     transplant_parser = subparsers.add_parser("transplant", help="Transplanta pesos de modelo HF")
     transplant_parser.add_argument(
@@ -124,6 +147,50 @@ def handle_infer(args):
         hawk.generate(
             args.prompt, sampling_config=cfg, telemetry=telemetry, speculative_k=getattr(args, "speculative", 0)
         )
+
+
+def handle_chat(args):
+    """Processa modo interativo / chat contínuo"""
+    print(BANNER)
+    print(f"  {CYAN}Modo Interativo iniciado. Digite 'sair', 'exit' ou 'quit' para encerrar.{RESET}\n")
+
+    eviction = getattr(args, "eviction", os.getenv("LITTLE_HAWK_EVICTION", "fifo"))
+    tok, engine = build_tokenizer_and_engine(args.weights, eviction=eviction)
+    hawk = LittleHawkInference(tokenizer=tok, engine=engine)
+
+    cfg = SamplingConfig(
+        max_tokens=args.max_tokens,
+        temperature=args.temperature,
+        top_k=args.top_k,
+        top_p=args.top_p,
+        rep_penalty=args.rep_penalty,
+        min_p=getattr(args, "min_p", 0.0),
+    )
+
+    while True:
+        try:
+            prompt = input(f"\n{BOLD}{GREEN}Você > {RESET}").strip()
+            if not prompt:
+                continue
+            if prompt.lower() in ("sair", "exit", "quit", "q"):
+                print(f"{YELLOW}Encerrando sessão interativa.{RESET}")
+                break
+
+            print(f"{BOLD}{CYAN}Little Hawk > {RESET}", end="", flush=True)
+            if args.no_panel:
+                hawk.generate(
+                    prompt,
+                    sampling_config=cfg,
+                    on_token=lambda text, step, stats: print(text, end="", flush=True),
+                    panel=False,
+                )
+                print()
+            else:
+                telemetry = ConsoleTelemetry()
+                hawk.generate(prompt, sampling_config=cfg, telemetry=telemetry)
+        except (KeyboardInterrupt, EOFError):
+            print(f"\n{YELLOW}Encerrando sessão interativa.{RESET}")
+            break
 
 
 def handle_transplant(args):
@@ -223,6 +290,8 @@ def main():
     # Executar subcomando
     if args.command == "infer":
         handle_infer(args)
+    elif args.command == "chat":
+        handle_chat(args)
     elif args.command == "transplant":
         handle_transplant(args)
     elif args.command == "api":
