@@ -57,3 +57,53 @@ def test_generate_sse_stream(client):
             tokens.append(payload["token"])
         assert done
         assert len(tokens) <= 6  # 5 gerados + possível flush final
+
+
+def test_concurrent_requests_within_limit(client):
+    import threading
+    import time
+
+    responses = []
+
+    def make_request():
+        r = client.post("/generate", json={"prompt": "teste", "max_tokens": 3})
+        responses.append(r)
+
+    t1 = threading.Thread(target=make_request)
+    t2 = threading.Thread(target=make_request)
+
+    t1.start()
+    t2.start()
+
+    t1.join()
+    t2.join()
+
+    assert len(responses) == 2
+    for r in responses:
+        assert r.status_code == 200
+        # In demo mode, it should be SSE stream
+        assert r.headers["content-type"].startswith("text/event-stream")
+
+
+def test_semaphore_reported_in_health(client):
+    r = client.get("/health")
+    assert r.status_code == 200
+    body = r.json()
+    assert "max_concurrency" in body
+    assert "timeout_secs" in body
+
+
+def test_generate_respects_max_tokens_limit(client):
+    with client.stream("POST", "/generate", json={"prompt": "memória", "max_tokens": 2}) as resp:
+        assert resp.status_code == 200
+        tokens, done = [], False
+        for line in resp.iter_lines():
+            if not line.startswith("data: "):
+                continue
+            payload = json.loads(line[len("data: ") :])
+            if payload.get("token") == "[DONE]":
+                done = True
+                break
+            tokens.append(payload["token"])
+        assert done
+        assert len(tokens) <= 3

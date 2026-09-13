@@ -25,6 +25,7 @@ import json
 import os
 import queue as _queue_mod
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
 import numpy as np
@@ -47,6 +48,7 @@ _hawk = None
 _tok = None
 _gen_semaphore: asyncio.Semaphore | None = None
 _load_lock = threading.Lock()
+_thread_pool = ThreadPoolExecutor(max_workers=MAX_CONCURRENCY, thread_name_prefix="hawk-gen")
 
 
 def _ensure_semaphore() -> asyncio.Semaphore:
@@ -61,6 +63,7 @@ async def lifespan(_app: FastAPI):
     load_model(DEFAULT_WEIGHTS)
     _ensure_semaphore()
     yield
+    _thread_pool.shutdown(wait=False)
 
 
 app = FastAPI(title="Little Hawk API", version="0.8.0", lifespan=lifespan)
@@ -167,12 +170,18 @@ async def _stream_sse(
     cancel = threading.Event()
 
     async with _ensure_semaphore():
-        producer = threading.Thread(
-            target=_blocking_stream,
-            args=(prompt, max_tokens, temperature, top_k, top_p, rep_penalty, out_q, cancel, min_p),
-            daemon=True,
+        future = _thread_pool.submit(
+            _blocking_stream,
+            prompt,
+            max_tokens,
+            temperature,
+            top_k,
+            top_p,
+            rep_penalty,
+            out_q,
+            cancel,
+            min_p,
         )
-        producer.start()
         deadline = loop.time() + TIMEOUT_SECS
         timed_out = False
         try:
@@ -195,6 +204,10 @@ async def _stream_sse(
             yield _DONE
         finally:
             cancel.set()
+            try:
+                future.result(timeout=5.0)
+            except Exception:
+                pass
 
 
 @app.get("/health")
