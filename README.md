@@ -577,7 +577,7 @@ Contribuições são muito bem-vindas! Para colaborar com o Little Hawk:
 4. Garanta que o código está limpo rodando `ruff check .` e `pytest`
 5. Abra um Pull Request explicando sua motivação e mudanças
 
-Sugestões, issues e discussões são incentivadas!
+Sugestões, issues e discussões são incentivadas! Veja também o [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
