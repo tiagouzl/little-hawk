@@ -1,0 +1,118 @@
+{
+ "config": {
+  "contexts": [
+   600
+  ],
+  "depths": [
+   0.1,
+   0.5,
+   0.9
+  ],
+  "reps": 2,
+  "gen": 12,
+  "arms": [
+   "fifo",
+   "salience"
+  ],
+  "sample": true,
+  "out": "benchmarks/transformer_vs_rwkv/results_needle_tf_s.json"
+ },
+ "trials": [
+  {
+   "arm": "smollm2-135m-instruct",
+   "ctx": 600,
+   "depth": 0.1,
+   "rep": 0,
+   "hit": false,
+   "text": "\nQ: E-mail adicionado.\nP"
+  },
+  {
+   "arm": "smollm2-135m-nexussalience",
+   "ctx": 600,
+   "depth": 0.1,
+   "rep": 0,
+   "hit": false,
+   "text": "\n\nM\u00e1rio, este documento \u00e9 um"
+  },
+  {
+   "arm": "smollm2-135m-instruct",
+   "ctx": 600,
+   "depth": 0.1,
+   "rep": 1,
+   "hit": false,
+   "text": "\nEstrategia: Se voc\u00ea deseja"
+  },
+  {
+   "arm": "smollm2-135m-nexussalience",
+   "ctx": 600,
+   "depth": 0.1,
+   "rep": 1,
+   "hit": false,
+   "text": "\nPerguntas: Qual \u00e9 o identificador"
+  },
+  {
+   "arm": "smollm2-135m-instruct",
+   "ctx": 600,
+   "depth": 0.5,
+   "rep": 0,
+   "hit": false,
+   "text": "\nA:\nTamb\u00e9m temos a c"
+  },
+  {
+   "arm": "smollm2-135m-nexussalience",
+   "ctx": 600,
+   "depth": 0.5,
+   "rep": 0,
+   "hit": false,
+   "text": "\nPerguntas: Quel este c\u00e9"
+  },
+  {
+   "arm": "smollm2-135m-instruct",
+   "ctx": 600,
+   "depth": 0.5,
+   "rep": 1,
+   "hit": false,
+   "text": "\nA: 13576290"
+  },
+  {
+   "arm": "smollm2-135m-nexussalience",
+   "ctx": 600,
+   "depth": 0.5,
+   "rep": 1,
+   "hit": false,
+   "text": "\nAprende-t\u00e9 o que est\u00e1"
+  },
+  {
+   "arm": "smollm2-135m-instruct",
+   "ctx": 600,
+   "depth": 0.9,
+   "rep": 0,
+   "hit": false,
+   "text": "\nA: No estado 4510."
+  },
+  {
+   "arm": "smollm2-135m-nexussalience",
+   "ctx": 600,
+   "depth": 0.9,
+   "rep": 0,
+   "hit": false,
+   "text": "\nEntrada: A biblioteca municipal recebeu"
+  },
+  {
+   "arm": "smollm2-135m-instruct",
+   "ctx": 600,
+   "depth": 0.9,
+   "rep": 1,
+   "hit": false,
+   "text": "\n\nA: 1.5.202"
+  },
+  {
+   "arm": "smollm2-135m-nexussalience",
+   "ctx": 600,
+   "depth": 0.9,
+   "rep": 1,
+   "hit": false,
+   "text": "\nEstudo: O identificador secreto men"
+  }
+ ]
+}

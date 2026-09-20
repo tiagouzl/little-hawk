@@ -1,0 +1,19 @@
+{
+ "donor": "BlinkDL/rwkv7-g1",
+ "checkpoint": "rwkv7-g1d-0.1b-20260129-ctx8192.pth",
+ "sha256_src": "e10d7b1930c2644c5c6b194444774d6d82ec8212a78763493149de09aac7d83f",
+ "size_src_MB": 382.2,
+ "size_npz_MB": 359.6,
+ "dtype_src": "bfloat16",
+ "dtype_npz": "float32",
+ "n_tensors": 402,
+ "n_params": 191084544,
+ "arch": "rwkv7-g1 (x070)",
+ "n_layer": 12,
+ "n_embd": 768,
+ "vocab_size": 65536,
+ "head_size": 64,
+ "ctx_train": 8192,
+ "tokenizer": "rwkv_vocab_v20230424",
+ "license": "Apache-2.0"
+}

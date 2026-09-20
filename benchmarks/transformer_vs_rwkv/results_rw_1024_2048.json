@@ -1,0 +1,115 @@
+{
+ "config": {
+  "contexts": [
+   1024,
+   2048
+  ],
+  "reps": 3,
+  "gen": 16,
+  "arms": [
+   "rwkv"
+  ],
+  "out": "benchmarks/transformer_vs_rwkv/results_rw_1024_2048.json"
+ },
+ "rss_baseline_mb": 1174.34375,
+ "trials": [
+  {
+   "prefill_ms": 536362.7,
+   "ttft_ms": 536362.7,
+   "decode_ms": 7707.3,
+   "tok_s": 2.08,
+   "generated": 16,
+   "rss_prefill_mb": 1176.1640625,
+   "rss_decode_mb": 1102.0625,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 1024,
+   "rep": 0,
+   "state_bytes_theory": 2433024
+  },
+  {
+   "prefill_ms": 413225.4,
+   "ttft_ms": 413225.4,
+   "decode_ms": 7021.0,
+   "tok_s": 2.28,
+   "generated": 16,
+   "rss_prefill_mb": 1083.6171875,
+   "rss_decode_mb": 1069.44140625,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 1024,
+   "rep": 1,
+   "state_bytes_theory": 2433024
+  },
+  {
+   "prefill_ms": 553878.3,
+   "ttft_ms": 553878.3,
+   "decode_ms": 3789.3,
+   "tok_s": 4.22,
+   "generated": 16,
+   "rss_prefill_mb": 1063.5,
+   "rss_decode_mb": 1063.26171875,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 1024,
+   "rep": 2,
+   "state_bytes_theory": 2433024
+  },
+  {
+   "prefill_ms": 529542.7,
+   "ttft_ms": 529542.7,
+   "decode_ms": 4102.6,
+   "tok_s": 3.9,
+   "generated": 16,
+   "rss_prefill_mb": 983.82421875,
+   "rss_decode_mb": 983.82421875,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 2048,
+   "rep": 0,
+   "state_bytes_theory": 2433024
+  },
+  {
+   "prefill_ms": 558181.2,
+   "ttft_ms": 558181.2,
+   "decode_ms": 3922.9,
+   "tok_s": 4.08,
+   "generated": 16,
+   "rss_prefill_mb": 949.73046875,
+   "rss_decode_mb": 949.73046875,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 2048,
+   "rep": 1,
+   "state_bytes_theory": 2433024
+  },
+  {
+   "prefill_ms": 553675.5,
+   "ttft_ms": 553675.5,
+   "decode_ms": 3881.0,
+   "tok_s": 4.12,
+   "generated": 16,
+   "rss_prefill_mb": 949.73046875,
+   "rss_decode_mb": 949.73046875,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 2048,
+   "rep": 2,
+   "state_bytes_theory": 2433024
+  }
+ ],
+ "summary": {
+  "rwkv7-g1d-0.1b@1024": {
+   "prefill_ms_mean": 501155.5,
+   "tok_s_mean": 2.86,
+   "rss_prefill_mb_mean": 1107.8,
+   "n": 3
+  },
+  "rwkv7-g1d-0.1b@2048": {
+   "prefill_ms_mean": 547133.1,
+   "tok_s_mean": 4.03,
+   "rss_prefill_mb_mean": 961.1,
+   "n": 3
+  }
+ }
+}

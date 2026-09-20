@@ -1,0 +1,13 @@
+{
+ "donor": "HuggingFaceTB/SmolLM2-135M-Instruct",
+ "n_layers": 30,
+ "d_model": 576,
+ "intermediate": 1536,
+ "n_heads": 9,
+ "d_k": 64,
+ "vocab_size": 49152,
+ "rope_base": 100000.0,
+ "bos_id": 1,
+ "eos_id": 2,
+ "vocab": {}
+}

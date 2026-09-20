@@ -1,0 +1,164 @@
+{
+ "config": {
+  "contexts": [
+   128,
+   512,
+   1024
+  ],
+  "reps": 3,
+  "gen": 32,
+  "arms": [
+   "transformer"
+  ],
+  "out": "benchmarks/transformer_vs_rwkv/results_tf_clean.json"
+ },
+ "rss_baseline_mb": 986.54296875,
+ "trials": [
+  {
+   "prefill_ms": 1030.6,
+   "ttft_ms": 1030.6,
+   "decode_ms": 4171.2,
+   "tok_s": 7.67,
+   "generated": 32,
+   "rss_prefill_mb": 1008.5078125,
+   "rss_decode_mb": 1011.453125,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 128,
+   "rep": 0,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 956.2,
+   "ttft_ms": 956.2,
+   "decode_ms": 4690.0,
+   "tok_s": 6.82,
+   "generated": 32,
+   "rss_prefill_mb": 1015.765625,
+   "rss_decode_mb": 1018.015625,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 128,
+   "rep": 1,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 704.9,
+   "ttft_ms": 704.9,
+   "decode_ms": 4485.9,
+   "tok_s": 7.13,
+   "generated": 32,
+   "rss_prefill_mb": 1015.765625,
+   "rss_decode_mb": 1018.015625,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 128,
+   "rep": 2,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 3376.3,
+   "ttft_ms": 3376.3,
+   "decode_ms": 7003.3,
+   "tok_s": 4.57,
+   "generated": 32,
+   "rss_prefill_mb": 1089.6640625,
+   "rss_decode_mb": 1048.9921875,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 512,
+   "rep": 0,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 3516.3,
+   "ttft_ms": 3516.3,
+   "decode_ms": 7163.2,
+   "tok_s": 4.47,
+   "generated": 32,
+   "rss_prefill_mb": 1089.78125,
+   "rss_decode_mb": 1048.99609375,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 512,
+   "rep": 1,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 3315.4,
+   "ttft_ms": 3315.4,
+   "decode_ms": 6872.6,
+   "tok_s": 4.66,
+   "generated": 32,
+   "rss_prefill_mb": 1089.62109375,
+   "rss_decode_mb": 1048.99609375,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 512,
+   "rep": 2,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 114849.1,
+   "ttft_ms": 114849.1,
+   "decode_ms": 7382.7,
+   "tok_s": 4.33,
+   "generated": 32,
+   "rss_prefill_mb": 1089.953125,
+   "rss_decode_mb": 1048.99609375,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 1024,
+   "rep": 0,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 115494.1,
+   "ttft_ms": 115494.1,
+   "decode_ms": 7091.9,
+   "tok_s": 4.51,
+   "generated": 32,
+   "rss_prefill_mb": 1089.69140625,
+   "rss_decode_mb": 1048.99609375,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 1024,
+   "rep": 1,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 118314.7,
+   "ttft_ms": 118314.7,
+   "decode_ms": 7310.6,
+   "tok_s": 4.38,
+   "generated": 32,
+   "rss_prefill_mb": 1089.91796875,
+   "rss_decode_mb": 1048.99609375,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 1024,
+   "rep": 2,
+   "state_bytes_theory": 70778880
+  }
+ ],
+ "summary": {
+  "smollm2-135m-instruct@128": {
+   "prefill_ms_mean": 897.2,
+   "tok_s_mean": 7.21,
+   "rss_prefill_mb_mean": 1013.3,
+   "n": 3
+  },
+  "smollm2-135m-instruct@512": {
+   "prefill_ms_mean": 3402.7,
+   "tok_s_mean": 4.57,
+   "rss_prefill_mb_mean": 1089.7,
+   "n": 3
+  },
+  "smollm2-135m-instruct@1024": {
+   "prefill_ms_mean": 116219.3,
+   "tok_s_mean": 4.41,
+   "rss_prefill_mb_mean": 1089.9,
+   "n": 3
+  }
+ }
+}

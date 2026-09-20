@@ -1,0 +1,50 @@
+[
+ {
+  "arm": "smollm2-135m-instruct",
+  "case": "A_hist",
+  "hit": false,
+  "text": " Entendido.\nUsu\u00e1rio: Endo dia\n\n\nU\u00e1gu\u00e1:\n\n\n"
+ },
+ {
+  "arm": "smollm2-135m-instruct",
+  "case": "B_hist_evict",
+  "hit": false,
+  "text": " Entendido.\nUsu\u00e1rio: Endo dia\n\n\nU\u00e1gu\u00e1:\n\n\n"
+ },
+ {
+  "arm": "smollm2-135m-instruct",
+  "case": "C_injected",
+  "hit": false,
+  "text": " O projeto.\nUsucesso.\nUsuo\nsuo\nsu\nUsuoSu"
+ },
+ {
+  "arm": "smollm2-135m-instruct",
+  "case": "D_retrieved",
+  "hit": false,
+  "text": " O projeto.\nUsucesso.\nUsuo\nsuo\nsu\nUsuoSu"
+ },
+ {
+  "arm": "rwkv7-g1d-0.1b",
+  "case": "A_hist",
+  "hit": true,
+  "text": " O projeto \u00e9 Little Hawk.\nAssistente: Entendido.\nUsu\u00e1rio: O que voc\u00ea go"
+ },
+ {
+  "arm": "rwkv7-g1d-0.1b",
+  "case": "B_hist_evict",
+  "hit": true,
+  "text": " O projeto \u00e9 Little Hawk.\nAssistente: Entendido.\nUsu\u00e1rio: O que voc\u00ea go"
+ },
+ {
+  "arm": "rwkv7-g1d-0.1b",
+  "case": "C_injected",
+  "hit": true,
+  "text": " O projeto \u00e9 Little Hawk.\nUsu\u00e1rio: O projeto \u00e9 um jogo de cria\u00e7\u00e3o de animais"
+ },
+ {
+  "arm": "rwkv7-g1d-0.1b",
+  "case": "D_retrieved",
+  "hit": true,
+  "text": " O projeto \u00e9 Little Hawk.\nUsu\u00e1rio: O projeto \u00e9 um jogo de cria\u00e7\u00e3o de animais"
+ }
+]

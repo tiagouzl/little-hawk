@@ -1,0 +1,115 @@
+{
+ "config": {
+  "contexts": [
+   1024,
+   2048
+  ],
+  "reps": 3,
+  "gen": 16,
+  "arms": [
+   "transformer"
+  ],
+  "out": "benchmarks/transformer_vs_rwkv/results_tf_1024_2048.json"
+ },
+ "rss_baseline_mb": 990.82421875,
+ "trials": [
+  {
+   "prefill_ms": 180739.1,
+   "ttft_ms": 180739.1,
+   "decode_ms": 6000.8,
+   "tok_s": 2.67,
+   "generated": 16,
+   "rss_prefill_mb": 1093.9140625,
+   "rss_decode_mb": 1053.05078125,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 1024,
+   "rep": 0,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 180055.6,
+   "ttft_ms": 180055.6,
+   "decode_ms": 5120.0,
+   "tok_s": 3.12,
+   "generated": 16,
+   "rss_prefill_mb": 1094.05859375,
+   "rss_decode_mb": 1053.05078125,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 1024,
+   "rep": 1,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 149355.1,
+   "ttft_ms": 149355.1,
+   "decode_ms": 4239.4,
+   "tok_s": 3.77,
+   "generated": 16,
+   "rss_prefill_mb": 1093.99609375,
+   "rss_decode_mb": 1053.05078125,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 1024,
+   "rep": 2,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 487482.1,
+   "ttft_ms": 487482.1,
+   "decode_ms": 5015.1,
+   "tok_s": 3.19,
+   "generated": 16,
+   "rss_prefill_mb": 1094.04296875,
+   "rss_decode_mb": 1053.08203125,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 2048,
+   "rep": 0,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 630286.3,
+   "ttft_ms": 630286.3,
+   "decode_ms": 7796.8,
+   "tok_s": 2.05,
+   "generated": 16,
+   "rss_prefill_mb": 1094.0703125,
+   "rss_decode_mb": 1053.11328125,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 2048,
+   "rep": 1,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 760168.3,
+   "ttft_ms": 760168.3,
+   "decode_ms": 7151.4,
+   "tok_s": 2.24,
+   "generated": 16,
+   "rss_prefill_mb": 1094.04296875,
+   "rss_decode_mb": 1053.078125,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 2048,
+   "rep": 2,
+   "state_bytes_theory": 70778880
+  }
+ ],
+ "summary": {
+  "smollm2-135m-instruct@1024": {
+   "prefill_ms_mean": 170049.9,
+   "tok_s_mean": 3.19,
+   "rss_prefill_mb_mean": 1094.0,
+   "n": 3
+  },
+  "smollm2-135m-instruct@2048": {
+   "prefill_ms_mean": 625978.9,
+   "tok_s_mean": 2.49,
+   "rss_prefill_mb_mean": 1094.1,
+   "n": 3
+  }
+ }
+}

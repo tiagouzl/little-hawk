@@ -4,10 +4,12 @@ __pycache__/
 .DS_Store
 .git_backup_before_squash/
 *.npz
+*.pth
 
 # Artefatos locais
 /codex
 /Repositório-clonado-github/
+data/rwkv/.cache/
 
 *.egg-info/
 engine/cython_fast.c

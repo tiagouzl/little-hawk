@@ -1,0 +1,117 @@
+{
+ "config": {
+  "contexts": [
+   600
+  ],
+  "depths": [
+   0.1,
+   0.5,
+   0.9
+  ],
+  "reps": 2,
+  "gen": 12,
+  "arms": [
+   "fifo",
+   "salience"
+  ],
+  "out": "benchmarks/transformer_vs_rwkv/results_needle_tf.json"
+ },
+ "trials": [
+  {
+   "arm": "smollm2-135m-instruct",
+   "ctx": 600,
+   "depth": 0.1,
+   "rep": 0,
+   "hit": false,
+   "text": "\n\nA: 1\n\nA: 1"
+  },
+  {
+   "arm": "smollm2-135m-nexussalience",
+   "ctx": 600,
+   "depth": 0.1,
+   "rep": 0,
+   "hit": false,
+   "text": "\n\nA: 1\n\nA: 1"
+  },
+  {
+   "arm": "smollm2-135m-instruct",
+   "ctx": 600,
+   "depth": 0.1,
+   "rep": 1,
+   "hit": false,
+   "text": "\n\nA: 1\n\nA: 1"
+  },
+  {
+   "arm": "smollm2-135m-nexussalience",
+   "ctx": 600,
+   "depth": 0.1,
+   "rep": 1,
+   "hit": false,
+   "text": "\n\nA: 1\n\nA: 1"
+  },
+  {
+   "arm": "smollm2-135m-instruct",
+   "ctx": 600,
+   "depth": 0.5,
+   "rep": 0,
+   "hit": false,
+   "text": "\n\nA: 1\n\nA: 1"
+  },
+  {
+   "arm": "smollm2-135m-nexussalience",
+   "ctx": 600,
+   "depth": 0.5,
+   "rep": 0,
+   "hit": false,
+   "text": "\n\nA: 1\n\nA: 1"
+  },
+  {
+   "arm": "smollm2-135m-instruct",
+   "ctx": 600,
+   "depth": 0.5,
+   "rep": 1,
+   "hit": false,
+   "text": "\n\nA: 1\n\nA: 1"
+  },
+  {
+   "arm": "smollm2-135m-nexussalience",
+   "ctx": 600,
+   "depth": 0.5,
+   "rep": 1,
+   "hit": false,
+   "text": "\n\nA: 1\n\nA: 1"
+  },
+  {
+   "arm": "smollm2-135m-instruct",
+   "ctx": 600,
+   "depth": 0.9,
+   "rep": 0,
+   "hit": false,
+   "text": "\n\nA: 1\n\nA: 1"
+  },
+  {
+   "arm": "smollm2-135m-nexussalience",
+   "ctx": 600,
+   "depth": 0.9,
+   "rep": 0,
+   "hit": false,
+   "text": "\n\nA: 1. 1. 2"
+  },
+  {
+   "arm": "smollm2-135m-instruct",
+   "ctx": 600,
+   "depth": 0.9,
+   "rep": 1,
+   "hit": false,
+   "text": "\n\nA: 1\n\nA: 1"
+  },
+  {
+   "arm": "smollm2-135m-nexussalience",
+   "ctx": 600,
+   "depth": 0.9,
+   "rep": 1,
+   "hit": false,
+   "text": "\n\nA: 1. 1. 2"
+  }
+ ]
+}

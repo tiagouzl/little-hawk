@@ -1,0 +1,87 @@
+{
+ "config": {
+  "contexts": [
+   128,
+   512
+  ],
+  "reps": 2,
+  "gen": 16,
+  "arms": [
+   "rwkv"
+  ],
+  "out": "benchmarks/transformer_vs_rwkv/results_rw_iso.json"
+ },
+ "rss_baseline_mb": 1174.47265625,
+ "trials": [
+  {
+   "prefill_ms": 36295.0,
+   "ttft_ms": 36295.0,
+   "decode_ms": 4015.6,
+   "tok_s": 3.98,
+   "generated": 16,
+   "rss_prefill_mb": 1176.82421875,
+   "rss_decode_mb": 1177.82421875,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 128,
+   "rep": 0,
+   "state_bytes_theory": 2433024
+  },
+  {
+   "prefill_ms": 36293.3,
+   "ttft_ms": 36293.3,
+   "decode_ms": 5291.8,
+   "tok_s": 3.02,
+   "generated": 16,
+   "rss_prefill_mb": 1177.82421875,
+   "rss_decode_mb": 1178.0234375,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 128,
+   "rep": 1,
+   "state_bytes_theory": 2433024
+  },
+  {
+   "prefill_ms": 139565.2,
+   "ttft_ms": 139565.2,
+   "decode_ms": 4958.2,
+   "tok_s": 3.23,
+   "generated": 16,
+   "rss_prefill_mb": 1178.0234375,
+   "rss_decode_mb": 1178.0234375,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 512,
+   "rep": 0,
+   "state_bytes_theory": 2433024
+  },
+  {
+   "prefill_ms": 143194.1,
+   "ttft_ms": 143194.1,
+   "decode_ms": 3816.4,
+   "tok_s": 4.19,
+   "generated": 16,
+   "rss_prefill_mb": 1178.0234375,
+   "rss_decode_mb": 1178.0234375,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 512,
+   "rep": 1,
+   "state_bytes_theory": 2433024
+  }
+ ],
+ "summary": {
+  "rwkv7-g1d-0.1b@128": {
+   "prefill_ms_mean": 36294.2,
+   "tok_s_mean": 3.5,
+   "rss_prefill_mb_mean": 1177.3,
+   "n": 2
+  },
+  "rwkv7-g1d-0.1b@512": {
+   "prefill_ms_mean": 141379.7,
+   "tok_s_mean": 3.71,
+   "rss_prefill_mb_mean": 1178.0,
+   "n": 2
+  }
+ }
+}

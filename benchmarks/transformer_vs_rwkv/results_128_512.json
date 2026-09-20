@@ -1,0 +1,156 @@
+{
+ "config": {
+  "contexts": [
+   128,
+   512
+  ],
+  "reps": 2,
+  "gen": 16,
+  "arms": [
+   "transformer",
+   "rwkv"
+  ],
+  "out": "benchmarks/transformer_vs_rwkv/results_128_512.json"
+ },
+ "rss_baseline_mb": 2218.90234375,
+ "trials": [
+  {
+   "prefill_ms": 1911.7,
+   "ttft_ms": 1911.7,
+   "decode_ms": 5581.0,
+   "tok_s": 2.87,
+   "generated": 16,
+   "rss_prefill_mb": 2221.66796875,
+   "rss_decode_mb": 2221.73046875,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 128,
+   "rep": 0,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 43658.9,
+   "ttft_ms": 43658.9,
+   "decode_ms": 5434.6,
+   "tok_s": 2.94,
+   "generated": 16,
+   "rss_prefill_mb": 2221.7890625,
+   "rss_decode_mb": 2221.7890625,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 128,
+   "rep": 0,
+   "state_bytes_theory": 2433024
+  },
+  {
+   "prefill_ms": 1521.7,
+   "ttft_ms": 1521.7,
+   "decode_ms": 3925.7,
+   "tok_s": 4.08,
+   "generated": 16,
+   "rss_prefill_mb": 2221.7890625,
+   "rss_decode_mb": 2221.7890625,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 128,
+   "rep": 1,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 45149.9,
+   "ttft_ms": 45149.9,
+   "decode_ms": 5503.0,
+   "tok_s": 2.91,
+   "generated": 16,
+   "rss_prefill_mb": 2221.7890625,
+   "rss_decode_mb": 2221.7890625,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 128,
+   "rep": 1,
+   "state_bytes_theory": 2433024
+  },
+  {
+   "prefill_ms": 5959.3,
+   "ttft_ms": 5959.3,
+   "decode_ms": 5032.0,
+   "tok_s": 3.18,
+   "generated": 16,
+   "rss_prefill_mb": 2222.23046875,
+   "rss_decode_mb": 2222.234375,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 512,
+   "rep": 0,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 168754.2,
+   "ttft_ms": 168754.2,
+   "decode_ms": 5430.2,
+   "tok_s": 2.95,
+   "generated": 16,
+   "rss_prefill_mb": 2222.234375,
+   "rss_decode_mb": 2222.234375,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 512,
+   "rep": 0,
+   "state_bytes_theory": 2433024
+  },
+  {
+   "prefill_ms": 6166.6,
+   "ttft_ms": 6166.6,
+   "decode_ms": 5287.3,
+   "tok_s": 3.03,
+   "generated": 16,
+   "rss_prefill_mb": 2222.234375,
+   "rss_decode_mb": 2222.234375,
+   "model": "smollm2-135m-instruct",
+   "params": 176097600,
+   "context": 512,
+   "rep": 1,
+   "state_bytes_theory": 70778880
+  },
+  {
+   "prefill_ms": 168755.8,
+   "ttft_ms": 168755.8,
+   "decode_ms": 5927.0,
+   "tok_s": 2.7,
+   "generated": 16,
+   "rss_prefill_mb": 2222.234375,
+   "rss_decode_mb": 2222.234375,
+   "model": "rwkv7-g1d-0.1b",
+   "params": 191084544,
+   "context": 512,
+   "rep": 1,
+   "state_bytes_theory": 2433024
+  }
+ ],
+ "summary": {
+  "smollm2-135m-instruct@128": {
+   "prefill_ms_mean": 1716.7,
+   "tok_s_mean": 3.48,
+   "rss_prefill_mb_mean": 2221.7,
+   "n": 2
+  },
+  "smollm2-135m-instruct@512": {
+   "prefill_ms_mean": 6063.0,
+   "tok_s_mean": 3.1,
+   "rss_prefill_mb_mean": 2222.2,
+   "n": 2
+  },
+  "rwkv7-g1d-0.1b@128": {
+   "prefill_ms_mean": 44404.4,
+   "tok_s_mean": 2.92,
+   "rss_prefill_mb_mean": 2221.8,
+   "n": 2
+  },
+  "rwkv7-g1d-0.1b@512": {
+   "prefill_ms_mean": 168755.0,
+   "tok_s_mean": 2.83,
+   "rss_prefill_mb_mean": 2222.2,
+   "n": 2
+  }
+ }
+}

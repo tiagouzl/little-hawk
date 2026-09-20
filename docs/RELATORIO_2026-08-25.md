@@ -3,7 +3,7 @@
 
 > **Data:** 25/08/2026 · **Versão:** `v0.7.0` + trilhas `A/B/C/D` (commits `8cacad4` → `418b082`)  
 > **Autor:** tiagouzl · **Repositório:** `github.com/tiagouzl/little-hawk` · **Licença:** MIT  
-> **Hardware de referência:** Acer Aspire A515-54 (i5-10210U, 8 GB, sem GPU, Mint 21)
+> **Hardware de referência:** Acer Aspire A515-54 (i5-10210U, 8 GB, sem GPU, Mint 22.3 / Python 3.12)
 
 ---
 

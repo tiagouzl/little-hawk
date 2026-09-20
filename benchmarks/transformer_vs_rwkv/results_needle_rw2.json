@@ -1,0 +1,52 @@
+{
+ "config": {
+  "contexts": [
+   600
+  ],
+  "depths": [
+   0.5,
+   0.9
+  ],
+  "reps": 2,
+  "gen": 12,
+  "arms": [
+   "rwkv"
+  ],
+  "sample": false,
+  "out": "benchmarks/transformer_vs_rwkv/results_needle_rw2.json"
+ },
+ "trials": [
+  {
+   "arm": "rwkv7-g1d-0.1b",
+   "ctx": 600,
+   "depth": 0.5,
+   "rep": 0,
+   "hit": false,
+   "text": "\nResposta: O identificador secreto \u00e9 \"11"
+  },
+  {
+   "arm": "rwkv7-g1d-0.1b",
+   "ctx": 600,
+   "depth": 0.5,
+   "rep": 1,
+   "hit": false,
+   "text": "\nResposta: O identificador secreto \u00e9 \"11"
+  },
+  {
+   "arm": "rwkv7-g1d-0.1b",
+   "ctx": 600,
+   "depth": 0.9,
+   "rep": 0,
+   "hit": false,
+   "text": "\nResposta: O identificador secreto \u00e9 \"12"
+  },
+  {
+   "arm": "rwkv7-g1d-0.1b",
+   "ctx": 600,
+   "depth": 0.9,
+   "rep": 1,
+   "hit": false,
+   "text": "\nResposta: O identificador secreto \u00e9 \"12"
+  }
+ ]
+}

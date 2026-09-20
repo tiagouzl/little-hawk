@@ -12,6 +12,7 @@ extend-exclude = [
     "transplants/",
     "examples/",
     "scripts/",
+    "data/",  # referência upstream verbatim (rwkv_v7_numpy.py) + artefatos locais
 ]
 
 [lint]

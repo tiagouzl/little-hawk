@@ -1,0 +1,728 @@
+[
+ {
+  "id": "recall-01",
+  "category": "recall",
+  "ok": true,
+  "fails": [],
+  "distance_turns": 0,
+  "text": "Entendi, seu nome é Eduarda.",
+  "mean_logprob": -0.6593105663628672,
+  "min_logprob": -2.426207042686107,
+  "first_logprob": -2.157470213770086,
+  "margin_top1_top2": 2.9399179311899037,
+  "ttft_s": 0.81,
+  "decode_tok_s": 4.02,
+  "peak_rss_mb": 1273.4,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "recall-02",
+  "category": "recall",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": 0,
+  "text": "Entendi, por favor, que eu moro em que cidade eu moro?",
+  "mean_logprob": -0.8982432874574173,
+  "min_logprob": -2.8726040384509797,
+  "first_logprob": -1.0833652690334103,
+  "margin_top1_top2": 1.8020712701897872,
+  "ttft_s": 0.812,
+  "decode_tok_s": 5.73,
+  "peak_rss_mb": 1280.6,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "recall-03",
+  "category": "recall",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": 1,
+  "text": "Qual é o meu número da sorte?",
+  "mean_logprob": -0.20897994683497878,
+  "min_logprob": -2.0150009844477226,
+  "first_logprob": -2.0150009844477226,
+  "margin_top1_top2": 5.143904319176307,
+  "ttft_s": 1.582,
+  "decode_tok_s": 3.23,
+  "peak_rss_mb": 1284.0,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "recall-04",
+  "category": "recall",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": 2,
+  "text": "Ajudar a minha minha cor favorita é muito importante.",
+  "mean_logprob": -0.9561621715008015,
+  "min_logprob": -2.443485665940049,
+  "first_logprob": -2.268737003305712,
+  "margin_top1_top2": 2.1233081817626953,
+  "ttft_s": 1.864,
+  "decode_tok_s": 4.01,
+  "peak_rss_mb": 1288.3,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "recall-05",
+  "category": "recall",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": 2,
+  "text": "O meu projeto é um meio que pode mudar bastante o dia.",
+  "mean_logprob": -0.9735922097168735,
+  "min_logprob": -2.9646408421948043,
+  "first_logprob": -1.8657923744071532,
+  "margin_top1_top2": 2.524800501371685,
+  "ttft_s": 1.907,
+  "decode_tok_s": 4.46,
+  "peak_rss_mb": 1288.8,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "recall-06",
+  "category": "recall",
+  "ok": false,
+  "fails": [
+   "all_of"
+  ],
+  "distance_turns": 3,
+  "text": "Em que dia é a minha reunião?",
+  "mean_logprob": -0.3645756321390259,
+  "min_logprob": -1.8434206088471405,
+  "first_logprob": -1.8434206088471405,
+  "margin_top1_top2": 4.444054516878995,
+  "ttft_s": 2.091,
+  "decode_tok_s": 4.3,
+  "peak_rss_mb": 1298.9,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "recall-07",
+  "category": "recall",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": 3,
+  "text": "Entendi, se chama o meu cachorro, pode ser um meu cachorro.",
+  "mean_logprob": -0.7609104642997324,
+  "min_logprob": -2.798943357018156,
+  "first_logprob": -2.6458590705664777,
+  "margin_top1_top2": 3.49660954108605,
+  "ttft_s": 2.696,
+  "decode_tok_s": 3.66,
+  "peak_rss_mb": 1303.1,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "recall-08",
+  "category": "recall",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": 4,
+  "text": "O código do cofre é um texto que faz parte de um cofre.",
+  "mean_logprob": -0.9334044831813774,
+  "min_logprob": -2.9263242919377093,
+  "first_logprob": -2.012168999084702,
+  "margin_top1_top2": 2.9313973513516514,
+  "ttft_s": 5.195,
+  "decode_tok_s": 2.95,
+  "peak_rss_mb": 1309.1,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "recall-09",
+  "category": "recall",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": 4,
+  "text": "O que você acha de estudar à noite?",
+  "mean_logprob": -0.45105370086081636,
+  "min_logprob": -2.0751127339474174,
+  "first_logprob": -2.0751127339474174,
+  "margin_top1_top2": 3.5647785323006764,
+  "ttft_s": 3.355,
+  "decode_tok_s": 3.6,
+  "peak_rss_mb": 1301.3,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "recall-10",
+  "category": "recall",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": 5,
+  "text": "Para que time eu torço?",
+  "mean_logprob": -0.6070411597726546,
+  "min_logprob": -2.470539795144903,
+  "first_logprob": -2.470539795144903,
+  "margin_top1_top2": 2.5092301898532443,
+  "ttft_s": 3.241,
+  "decode_tok_s": 3.22,
+  "peak_rss_mb": 1306.5,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "recall-11",
+  "category": "recall",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": 6,
+  "text": "Ao acordar mais horas, você pode ver o horário de acordo.",
+  "mean_logprob": -1.132136108087711,
+  "min_logprob": -2.7469235829748517,
+  "first_logprob": -2.409734841919821,
+  "margin_top1_top2": 1.9376505613327026,
+  "ttft_s": 4.156,
+  "decode_tok_s": 1.97,
+  "peak_rss_mb": 1315.4,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "recall-12",
+  "category": "recall",
+  "ok": false,
+  "fails": [
+   "all_of"
+  ],
+  "distance_turns": 6,
+  "text": "O mesmo você está ajudando.",
+  "mean_logprob": -1.0894715688675418,
+  "min_logprob": -2.6973846593637623,
+  "first_logprob": -2.2469281316847667,
+  "margin_top1_top2": 2.3932665911587803,
+  "ttft_s": 5.744,
+  "decode_tok_s": 2.25,
+  "peak_rss_mb": 1315.8,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "knowledge-01",
+  "category": "knowledge",
+  "ok": false,
+  "fails": [
+   "degenerado",
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "A capital do Brasil é o Brasil do Brasil, a cidade do Brasil, a ciudad do Brasil, a ciudad do Brasil, a ciudad do Brasil, a ciudad do Brasil, a ciudad do Brasil, a ciudad",
+  "mean_logprob": -0.4920056546456108,
+  "min_logprob": -2.517455594700417,
+  "first_logprob": -1.916679351400891,
+  "margin_top1_top2": 3.0198004133999348,
+  "ttft_s": 3.298,
+  "decode_tok_s": 1.97,
+  "peak_rss_mb": 1279.8,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "knowledge-02",
+  "category": "knowledge",
+  "ok": false,
+  "fails": [
+   "degenerado",
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "O seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu se",
+  "mean_logprob": -0.18229772864420427,
+  "min_logprob": -1.8473950543608693,
+  "first_logprob": -1.6159416402344986,
+  "margin_top1_top2": 5.0639681071043015,
+  "ttft_s": 1.723,
+  "decode_tok_s": 2.21,
+  "peak_rss_mb": 1282.1,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "knowledge-03",
+  "category": "knowledge",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "O sexto de um dia é uma semana.",
+  "mean_logprob": -0.7560736185037319,
+  "min_logprob": -1.8082497947715004,
+  "first_logprob": -1.5340565813889355,
+  "margin_top1_top2": 2.3865268413837137,
+  "ttft_s": 3.373,
+  "decode_tok_s": 2.87,
+  "peak_rss_mb": 1278.7,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "knowledge-04",
+  "category": "knowledge",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "O maior planeto do sistema solar é Europa. Europa está disponível como um planeta com o mesmo número de soluções, como 700 sols. Eu estão usando o mesmo número de solu",
+  "mean_logprob": -0.8656108219119139,
+  "min_logprob": -2.6433668032845614,
+  "first_logprob": -1.6567710240857974,
+  "margin_top1_top2": 2.427602507174015,
+  "ttft_s": 2.617,
+  "decode_tok_s": 2.25,
+  "peak_rss_mb": 1282.1,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "knowledge-05",
+  "category": "knowledge",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "O que significa a sigla CPU?\n\nA sigla CPU, also known as a CPU signal, is a signal that indicates the CPU is executing a program. It is a binary signal that indicates whether the CPU is currently executing a program, whether the program is currently running, or whether the program is waiting",
+  "mean_logprob": -0.7897406426155326,
+  "min_logprob": -2.38642966997014,
+  "first_logprob": -1.1342322609340458,
+  "margin_top1_top2": 1.8330082520842552,
+  "ttft_s": 3.234,
+  "decode_tok_s": 2.11,
+  "peak_rss_mb": 1282.1,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "knowledge-06",
+  "category": "knowledge",
+  "ok": false,
+  "fails": [
+   "degenerado",
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "O protocolo TCP é um protocolo que contém a conversa de múltiplos dados, que contém a conversa de múltiplos dados, que contém a conversa de múltiplos dados, que contém a conversa de",
+  "mean_logprob": -0.6082154421291669,
+  "min_logprob": -3.176550140383997,
+  "first_logprob": -1.0447385475501387,
+  "margin_top1_top2": 3.503995269536972,
+  "ttft_s": 5.066,
+  "decode_tok_s": 3.03,
+  "peak_rss_mb": 1282.1,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "knowledge-07",
+  "category": "knowledge",
+  "ok": false,
+  "fails": [
+   "degenerado",
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "O seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu seu se",
+  "mean_logprob": -0.21575100284642673,
+  "min_logprob": -1.8659860529708423,
+  "first_logprob": -1.5936369362833807,
+  "margin_top1_top2": 4.829350084066391,
+  "ttft_s": 3.737,
+  "decode_tok_s": 1.71,
+  "peak_rss_mb": 1282.1,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "knowledge-08",
+  "category": "knowledge",
+  "ok": false,
+  "fails": [
+   "degenerado",
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "Em que continente fica o Egito?\n\nEgito, a Europa, é o continente que fica o Egito. Egito é o continente que fica o Egito. Egito é o continente que fica o Egito.",
+  "mean_logprob": -0.6066169316565854,
+  "min_logprob": -2.505292929563043,
+  "first_logprob": -1.8673694820731694,
+  "margin_top1_top2": 3.245515038890223,
+  "ttft_s": 4.185,
+  "decode_tok_s": 1.99,
+  "peak_rss_mb": 1282.0,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "knowledge-09",
+  "category": "knowledge",
+  "ok": false,
+  "fails": [
+   "degenerado",
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "O horário é um minuto. O horário é um minuto. O horário é um minuto. O horário é um minuto. O horário é um minuto. O horário é um minuto. O horário é um minuto. O",
+  "mean_logprob": -0.3294031295422501,
+  "min_logprob": -2.5338549756947395,
+  "first_logprob": -1.6868999132430071,
+  "margin_top1_top2": 3.970111235976219,
+  "ttft_s": 4.148,
+  "decode_tok_s": 2.08,
+  "peak_rss_mb": 1277.7,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "knowledge-10",
+  "category": "knowledge",
+  "ok": false,
+  "fails": [
+   "degenerado",
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "O oposto de 'quente' é um nome que é um nome que é um nome que é um nome que é um nome que é um nome que é um nome que é um nome que é um nome que é um nome que é um nome que",
+  "mean_logprob": -0.3750375035937249,
+  "min_logprob": -3.1315053656021283,
+  "first_logprob": -1.5026834260341007,
+  "margin_top1_top2": 4.323129624128342,
+  "ttft_s": 2.483,
+  "decode_tok_s": 2.21,
+  "peak_rss_mb": 1270.1,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "format-01",
+  "category": "format",
+  "ok": false,
+  "fails": [
+   "degenerado",
+   "equals"
+  ],
+  "distance_turns": null,
+  "text": "O sol é um estrela. O sol é um estrela. O sol é um estrela. O sol é um estrela. O sol é um estrela. O sol é um estrela. O sol é um estrela. O sol é um estrela.",
+  "mean_logprob": -0.35578641669271555,
+  "min_logprob": -2.4448493106473617,
+  "first_logprob": -1.7928409773334701,
+  "margin_top1_top2": 3.9779853373765945,
+  "ttft_s": 3.907,
+  "decode_tok_s": 2.1,
+  "peak_rss_mb": 1270.0,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "format-02",
+  "category": "format",
+  "ok": false,
+  "fails": [
+   "equals"
+  ],
+  "distance_turns": null,
+  "text": "A água ferve é um produto que é uma forma de fazer ao que é possível. Com a água ferve, a 10 graus Celsius é o mais sim.",
+  "mean_logprob": -1.18192914486352,
+  "min_logprob": -3.5234835895512826,
+  "first_logprob": -1.9427628371312329,
+  "margin_top1_top2": 2.48004656791687,
+  "ttft_s": 2.384,
+  "decode_tok_s": 3.56,
+  "peak_rss_mb": 1268.9,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "format-03",
+  "category": "format",
+  "ok": true,
+  "fails": [],
+  "distance_turns": null,
+  "text": "Por que o céu é azul?",
+  "mean_logprob": -0.28472280318890036,
+  "min_logprob": -1.9454076604238328,
+  "first_logprob": -1.9454076604238328,
+  "margin_top1_top2": 4.035090793262828,
+  "ttft_s": 0.752,
+  "decode_tok_s": 4.89,
+  "peak_rss_mb": 1265.9,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "format-04",
+  "category": "format",
+  "ok": false,
+  "fails": [
+   "n_lines"
+  ],
+  "distance_turns": null,
+  "text": "1. *Pão de Pão*\n2. *Pão de Pão*\n3. *Pão de Pão*\n\nPágina: [URL]\n\nPágina: [URL]\n\nPágina: [URL]\n\nPág",
+  "mean_logprob": -0.5911706880628776,
+  "min_logprob": -3.1205464693301477,
+  "first_logprob": -2.1426135604470096,
+  "margin_top1_top2": 3.782733788713813,
+  "ttft_s": 0.853,
+  "decode_tok_s": 4.64,
+  "peak_rss_mb": 1269.8,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "format-05",
+  "category": "format",
+  "ok": false,
+  "fails": [
+   "equals_raw"
+  ],
+  "distance_turns": null,
+  "text": "Olá. Escreva a palavra 'olá' em letras maiúsculas e nada mais.",
+  "mean_logprob": -0.25957309129181816,
+  "min_logprob": -1.7959587903040057,
+  "first_logprob": -1.370157566898041,
+  "margin_top1_top2": 4.563059159687588,
+  "ttft_s": 0.818,
+  "decode_tok_s": 5.47,
+  "peak_rss_mb": 1267.8,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "format-06",
+  "category": "format",
+  "ok": false,
+  "fails": [
+   "any_of",
+   "max_words"
+  ],
+  "distance_turns": null,
+  "text": "Qual é a capital da França?",
+  "mean_logprob": -0.34380870850768647,
+  "min_logprob": -2.2070035609268692,
+  "first_logprob": -2.2070035609268692,
+  "margin_top1_top2": 3.7234479784965515,
+  "ttft_s": 0.766,
+  "decode_tok_s": 2.81,
+  "peak_rss_mb": 1265.5,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "format-07",
+  "category": "format",
+  "ok": false,
+  "fails": [
+   "fullmatch"
+  ],
+  "distance_turns": null,
+  "text": "O número é 10. Responda só com o número.",
+  "mean_logprob": -0.389386503002373,
+  "min_logprob": -2.012076019600514,
+  "first_logprob": -2.012076019600514,
+  "margin_top1_top2": 4.000010808308919,
+  "ttft_s": 1.13,
+  "decode_tok_s": 4.09,
+  "peak_rss_mb": 1266.6,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "format-08",
+  "category": "format",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "Bom dia!",
+  "mean_logprob": -0.7435217974199609,
+  "min_logprob": -1.7706079347255987,
+  "first_logprob": -1.7706079347255987,
+  "margin_top1_top2": 1.9517626762390134,
+  "ttft_s": 0.772,
+  "decode_tok_s": 5.85,
+  "peak_rss_mb": 1265.5,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "chitchat-01",
+  "category": "chitchat",
+  "ok": false,
+  "fails": [
+   "degenerado"
+  ],
+  "distance_turns": null,
+  "text": "Oi, tudo bem?\n\nOu, tudo bem?\n\nOu, tudo bem?\n\nOu, tudo bem?\n\nOu, tudo bem?\n\nOu, tudo bem?\n\nOu, t",
+  "mean_logprob": -0.22000753295532452,
+  "min_logprob": -1.6209972948816056,
+  "first_logprob": -1.365588826208213,
+  "margin_top1_top2": 4.638640642166138,
+  "ttft_s": 1.437,
+  "decode_tok_s": 4.84,
+  "peak_rss_mb": 1268.9,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "chitchat-02",
+  "category": "chitchat",
+  "ok": false,
+  "fails": [
+   "degenerado"
+  ],
+  "distance_turns": null,
+  "text": "Obrigado pela ajuda!\n\nObrigado pela ajuda!\n\nObrigado pela ajuda!\n\nObrigado pela ajuda!\n\nObrigado pela ajuda!\n\nObrigado",
+  "mean_logprob": -0.1440093790587763,
+  "min_logprob": -1.943069665897945,
+  "first_logprob": -1.3458605746314833,
+  "margin_top1_top2": 5.3142735213041306,
+  "ttft_s": 0.705,
+  "decode_tok_s": 3.47,
+  "peak_rss_mb": 1268.9,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "chitchat-03",
+  "category": "chitchat",
+  "ok": false,
+  "fails": [
+   "degenerado"
+  ],
+  "distance_turns": null,
+  "text": "Bom dia!\n\nBom dia!\n\nBom dia!\n\nBom dia!\n\nBom dia!\n\nBom dia!\n\nBom dia!\n\nBom dia!\n\nBom dia!\n\nBom dia!\n\nBom dia!",
+  "mean_logprob": -0.14859320980331503,
+  "min_logprob": -2.3186211975274937,
+  "first_logprob": -0.4434946326092815,
+  "margin_top1_top2": 5.1800761222839355,
+  "ttft_s": 1.096,
+  "decode_tok_s": 3.78,
+  "peak_rss_mb": 1268.9,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "chitchat-04",
+  "category": "chitchat",
+  "ok": false,
+  "fails": [
+   "degenerado"
+  ],
+  "distance_turns": null,
+  "text": "Você pode se apresentar em poucas palavras:\n\n* \"Para que o que o que o que o que o que o que o que o que o que o que o que o que o que o que o que o que o que o que o que o que",
+  "mean_logprob": -0.47890360943632526,
+  "min_logprob": -3.164093929423995,
+  "first_logprob": -1.5979454022261248,
+  "margin_top1_top2": 3.4212840646505356,
+  "ttft_s": 1.677,
+  "decode_tok_s": 4.99,
+  "peak_rss_mb": 1269.3,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "chitchat-05",
+  "category": "chitchat",
+  "ok": false,
+  "fails": [
+   "degenerado"
+  ],
+  "distance_turns": null,
+  "text": "Tchau, até mais!\n\nTchau, até mais!\n\nTchau, até mais!\n\nTchau, até mais!\n\nTchau, até mais!\n\nTchau, até mais!",
+  "mean_logprob": -0.22102445570620272,
+  "min_logprob": -2.644668318764259,
+  "first_logprob": -1.973964973474269,
+  "margin_top1_top2": 5.110787659883499,
+  "ttft_s": 0.561,
+  "decode_tok_s": 4.31,
+  "peak_rss_mb": 1268.9,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "abstain-01",
+  "category": "abstain",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "Que horas são agora?\n\nO que horas são agora?",
+  "mean_logprob": -0.5937992031932113,
+  "min_logprob": -2.6562866864867405,
+  "first_logprob": -2.1707117884855878,
+  "margin_top1_top2": 3.7467924419202303,
+  "ttft_s": 1.627,
+  "decode_tok_s": 3.94,
+  "peak_rss_mb": 1265.5,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "abstain-02",
+  "category": "abstain",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "A temperatura aí fora neste momento é o tema de uma época. O tema é o tempo que o cuidado de uma pessoa é aumentado. O tempo é o tempo que o cuidado de uma pessoa é aumentado",
+  "mean_logprob": -0.9322162694700948,
+  "min_logprob": -3.481555066729552,
+  "first_logprob": -2.31305713515934,
+  "margin_top1_top2": 2.8455494940280914,
+  "ttft_s": 0.895,
+  "decode_tok_s": 3.57,
+  "peak_rss_mb": 1268.9,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "abstain-03",
+  "category": "abstain",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "Nome: Javier Rodriguez",
+  "mean_logprob": -2.1447678398497807,
+  "min_logprob": -3.9796366713331888,
+  "first_logprob": -2.168085951538543,
+  "margin_top1_top2": 0.5092970530192057,
+  "ttft_s": 0.889,
+  "decode_tok_s": 4.94,
+  "peak_rss_mb": 1264.4,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "abstain-04",
+  "category": "abstain",
+  "ok": false,
+  "fails": [
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "Em que cidade eu moro?\n\nE que cidade eu moro?",
+  "mean_logprob": -0.5356050682074476,
+  "min_logprob": -2.5959624573391507,
+  "first_logprob": -1.6360433943172032,
+  "margin_top1_top2": 2.796604792277018,
+  "ttft_s": 0.874,
+  "decode_tok_s": 3.47,
+  "peak_rss_mb": 1265.5,
+  "load_rss_mb": 1742.2
+ },
+ {
+  "id": "abstain-05",
+  "category": "abstain",
+  "ok": false,
+  "fails": [
+   "degenerado",
+   "any_of"
+  ],
+  "distance_turns": null,
+  "text": "O número que eu te falei ontem é 10. E que eu te falei ontem é 10. E que eu te falei ontem é 10. E que eu te falei ontem é 10. E que eu te",
+  "mean_logprob": -0.354773558104588,
+  "min_logprob": -2.84449832612313,
+  "first_logprob": -1.9523152548532339,
+  "margin_top1_top2": 4.031340926885605,
+  "ttft_s": 0.908,
+  "decode_tok_s": 3.93,
+  "peak_rss_mb": 1269.3,
+  "load_rss_mb": 1742.2
+ }
+]

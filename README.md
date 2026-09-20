@@ -548,7 +548,7 @@ Acer Aspire A515-54
 CPU: Intel Core i5-10210U (4 cores, sem AVX-512)
 RAM: 8 GB DDR4-2666
 GPU: nenhuma (Intel UHD Graphics integrada, não usada)
-OS:  Linux Mint 21 XFCE
+OS:  Linux Mint 22.3 (Zena, base Ubuntu 24.04) XFCE
 ```
 
 ---
