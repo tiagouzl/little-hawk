@@ -15,7 +15,7 @@ except ImportError:
 
 
 def get_engine(*args, **kwargs):
-    """Factory: ONNX 30L validado 5 steps diff <1e-3, 1.45× vs NumPy (92 vs 134 ms)
+    """Factory: ONNX 30L validado 600 steps diff 1.5e-04, 1.21× vs NumPy (91 vs 110 ms, OMP=1)
 
     Evicção: LITTLE_HAWK_EVICTION=nexus ativa reservoir ponderado (D),
     caso contrário FIFO. ONNX ainda não tem evicção Nexus (usa FIFO).

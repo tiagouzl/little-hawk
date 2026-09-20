@@ -169,7 +169,7 @@ def validate(path):
     if all_ok:print(f"\n{ok(BOLD+'Arquivo íntegro — pronto para o CLI'+RESET)}")
     return all_ok
 
-def main():
+def main(argv=None):
     parser=argparse.ArgumentParser(description="Little Hawk Transplant v2 — SmolLM/SmolLM2")
     parser.add_argument("--model",type=str,default=DEFAULT_MODEL, choices=list(MODEL_CONFIGS.keys()),
                         help="Modelo HuggingFace (smollm-135m, smollm2-135m/360m/1.7b)")
@@ -178,7 +178,7 @@ def main():
     parser.add_argument("--cache-dir",default=None)
     parser.add_argument("--inspect",action="store_true")
     parser.add_argument("--validate",type=str,default=None)
-    args=parser.parse_args()
+    args=parser.parse_args(argv[1:] if argv is not None else None)
 
     # Configura globais para o modelo escolhido (mantém compatibilidade com funções legadas)
     global MODEL_ID, D_MODEL, INTERMEDIATE, N_HEADS, N_KV_HEADS, D_K, N_LAYERS, VOCAB_SIZE, ROPE_BASE, GQA_RATIO

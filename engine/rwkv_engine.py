@@ -51,12 +51,13 @@ class Rwkv7Engine:
 
     def __init__(self, n_layer=12, n_embd=768, vocab_size=65536):
         self.n_layers = n_layer
-        self.n_embd = n_layer and n_embd
+        self.n_embd = n_embd
         self.V = vocab_size
         self.H = n_embd // 64
         self.N = 64
-        self.bos_id = 0
-        self.eos_id = 0
+        # RWKV World não tem BOS/EOS — sentinelas fora do vocab: parada só por max_tokens
+        self.bos_id = -1
+        self.eos_id = -2
         self.W = {}
 
     # -- pesos ---------------------------------------------------------

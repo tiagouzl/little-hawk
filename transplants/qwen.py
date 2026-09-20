@@ -289,7 +289,7 @@ def validate(npz_path):
     else:
         print(err(f"{errs} chaves faltando"))
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser(description="Little Hawk Transplant — Qwen2.5-0.5B")
     p.add_argument("--layers",    type=int,  default=N_LAYERS,
                    help=f"Número de camadas a extrair (padrão: {N_LAYERS})")
@@ -297,7 +297,7 @@ def main():
     p.add_argument("--cache-dir", type=str,  default=None)
     p.add_argument("--inspect",   action="store_true")
     p.add_argument("--validate",  type=str,  default=None)
-    args = p.parse_args()
+    args = p.parse_args(argv[1:] if argv is not None else None)
 
     if args.validate:
         validate(args.validate); return

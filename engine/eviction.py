@@ -4,7 +4,7 @@ engine/eviction.py — Políticas de evicção para StreamingKVCache
 FIFO (atual): win_ptr circular, sobrescreve o mais antigo sem julgamento.
 Nexus (reservoir ponderado): usa scores de atenção para decidir vítima,
 mantendo sinks + janela recente intactos e gerindo o anel intermediário
-via reservoir sampling ponderado (arXiv 2606.23961).
+via reservoir sampling ponderado (ver ANALISE.md §20).
 """
 
 import numpy as np

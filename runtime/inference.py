@@ -40,6 +40,8 @@ class Sampler:
     def sample(self, logits: np.ndarray, generated: list[int] | None = None, rng=None) -> int:
         cfg = self.config
         rng = rng if rng is not None else np.random
+        # ponytail: fallback global mantido — TestSampling.test_deterministic_with_seed
+        # semeia np.random e exige repetibilidade; trocar por default_rng() quebra o contrato.
         logits = logits.astype(np.float64)
         # Penalidade de repetição
         if cfg.rep_penalty != 1.0 and generated:
@@ -164,9 +166,10 @@ class LittleHawkInference:
         if speculative_k and hasattr(self.engine, "verify_chunk"):
             from engine.speculative import can_verify
             if can_verify(self.engine, self.max_cap + 1, speculative_k):
-                return self._generate_speculative(
+                text, _spec_stats = self._generate_speculative(
                     prompt, sampling_config, on_token, speculative_k
                 )
+                return text
         caches = self.engine.init_cache()
         win_ptr = 0
         sdec = StreamDecoder(self.tok)

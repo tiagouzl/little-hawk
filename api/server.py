@@ -66,7 +66,24 @@ async def lifespan(_app: FastAPI):
     _thread_pool.shutdown(wait=False)
 
 
-app = FastAPI(title="Little Hawk API", version="0.8.0", lifespan=lifespan)
+def _app_version() -> str:
+    try:
+        import tomllib
+
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(root, "pyproject.toml"), "rb") as f:
+            return tomllib.load(f)["project"]["version"]
+    except Exception:
+        pass
+    try:
+        from importlib.metadata import version as _pkg_version
+
+        return _pkg_version("little-hawk")
+    except Exception:
+        return "0.9.0"
+
+
+app = FastAPI(title="Little Hawk API", version=_app_version(), lifespan=lifespan)
 
 
 class ClientDisconnected(Exception):
@@ -147,9 +164,12 @@ def _blocking_stream(
 
     try:
         _hawk.generate(prompt, sampling_config=cfg, telemetry=None, on_token=on_token)
-        out_q.put(None)  # fim normal
     except ClientDisconnected:
-        out_q.put(None)
+        pass
+    except Exception as e:
+        out_q.put(e)
+    finally:
+        out_q.put(None)  # fim normal, cancelado ou erro — nunca trava o SSE até timeout
 
 
 _DONE = 'data: {"token": "[DONE]"}\n\n'
@@ -196,6 +216,10 @@ async def _stream_sse(
                     timed_out = True
                     break
                 if chunk is None:
+                    break
+                if isinstance(chunk, Exception):
+                    payload = json.dumps({"error": f"{type(chunk).__name__}: {chunk}"}, ensure_ascii=False)
+                    yield f"data: {payload}\n\n"
                     break
                 payload = json.dumps({"token": chunk}, ensure_ascii=False)
                 yield f"data: {payload}\n\n"
@@ -248,4 +272,4 @@ async def root():
         from fastapi.responses import FileResponse
 
         return FileResponse(demo_path)
-    return {"message": "Little Hawk API v0.8.0"}
+    return {"message": f"Little Hawk API v{_app_version()}"}

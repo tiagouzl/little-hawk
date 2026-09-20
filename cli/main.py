@@ -73,7 +73,7 @@ Exemplos:
 
     # Subcomando chat (interativo)
     chat_parser = subparsers.add_parser("chat", help="Modo interativo / chat contínuo")
-    chat_parser.add_argument("--weights", type=str, default="little_hawk_weights.npz", help="Caminho para arquivo .npz")
+    chat_parser.add_argument("--weights", type=str, default=None, help="Caminho para arquivo .npz (omitir = demo)")
     chat_parser.add_argument("--max-tokens", type=int, default=DEFAULT_INFERENCE_CONFIG["max_tokens"])
     chat_parser.add_argument("--temperature", type=float, default=DEFAULT_INFERENCE_CONFIG["temperature"])
     chat_parser.add_argument("--top-k", type=int, default=DEFAULT_INFERENCE_CONFIG["top_k"])
@@ -93,6 +93,13 @@ Exemplos:
         help="Política de evicção",
     )
     chat_parser.add_argument("--no-panel", action="store_true", help="Sem painel de telemetria")
+    chat_parser.add_argument(
+        "--speculative",
+        type=int,
+        default=0,
+        metavar="K",
+        help="N-gram speculative decoding greedy com k rascunhos (0=off; FIFO only)",
+    )
 
     # Subcomando transplant
     transplant_parser = subparsers.add_parser("transplant", help="Transplanta pesos de modelo HF")
@@ -133,6 +140,7 @@ def handle_infer(args):
         min_p=getattr(args, "min_p", 0.0),
     )
     telemetry = ConsoleTelemetry() if not args.no_panel else None
+    spec_k = getattr(args, "speculative", 0)
     if args.no_panel:
         # Sem painel: imprime apenas os tokens decodificados
         parts = []
@@ -141,11 +149,12 @@ def handle_infer(args):
             sampling_config=cfg,
             on_token=lambda text, step, stats: parts.append(text),
             panel=False,
+            speculative_k=spec_k,
         )
         print("".join(parts))
     else:
         hawk.generate(
-            args.prompt, sampling_config=cfg, telemetry=telemetry, speculative_k=getattr(args, "speculative", 0)
+            args.prompt, sampling_config=cfg, telemetry=telemetry, speculative_k=spec_k
         )
 
 
@@ -177,17 +186,19 @@ def handle_chat(args):
                 break
 
             print(f"{BOLD}{CYAN}Little Hawk > {RESET}", end="", flush=True)
+            spec_k = getattr(args, "speculative", 0)
             if args.no_panel:
                 hawk.generate(
                     prompt,
                     sampling_config=cfg,
                     on_token=lambda text, step, stats: print(text, end="", flush=True),
                     panel=False,
+                    speculative_k=spec_k,
                 )
                 print()
             else:
                 telemetry = ConsoleTelemetry()
-                hawk.generate(prompt, sampling_config=cfg, telemetry=telemetry)
+                hawk.generate(prompt, sampling_config=cfg, telemetry=telemetry, speculative_k=spec_k)
         except (KeyboardInterrupt, EOFError):
             print(f"\n{YELLOW}Encerrando sessão interativa.{RESET}")
             break
@@ -201,13 +212,11 @@ def handle_transplant(args):
     if args.model in ("smollm-135m", "smollm2-135m", "smollm2-360m", "smollm2-1.7b"):
         from transplants.smollm import main as transplant_main
 
-        sys.argv = ["transplants/smollm.py", "--model", args.model, "--layers", str(args.layers)]
-        transplant_main()
+        transplant_main(["transplants/smollm.py", "--model", args.model, "--layers", str(args.layers)])
     elif args.model == "qwen2.5-0.5b":
         from transplants.qwen import main as transplant_qwen_main
 
-        sys.argv = ["transplants/qwen.py", "--layers", str(args.layers)]
-        transplant_qwen_main()
+        transplant_qwen_main(["transplants/qwen.py", "--layers", str(args.layers)])
 
 
 def handle_api(args):
