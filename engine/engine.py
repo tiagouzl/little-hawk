@@ -1,10 +1,9 @@
 """
 engine/engine.py — MultiLayerEngine para Little Hawk
 """
-import math
 import numpy as np
 from .transformer import LlamaLayer
-from .jit_kernels import _rope_numpy as _rope
+from .mojo_kernels import prefill_layer_forward
 
 # Cores para output (temporário, até mover para utils)
 
@@ -210,22 +209,13 @@ class MultiLayerEngine:
         causal=np.tril(np.ones((T,T),dtype=bool))
         for li,layer in enumerate(self.layers):
             kc,vc=caches[li]
-            x_n=self._rms_norm(x,layer.rms_attn)
-            _q = x_n @ layer.W_q; _k = x_n @ layer.W_k; _v = x_n @ layer.W_v
-            if layer.b_q is not None:
-                _q = _q + layer.b_q; _k = _k + layer.b_k; _v = _v + layer.b_v
-            q=_q.reshape(1,T,self.n_heads,self.d_k).transpose(0,2,1,3)
-            k=_k.reshape(1,T,self.n_heads,self.d_k).transpose(0,2,1,3)
-            v=_v.reshape(1,T,self.n_heads,self.d_k).transpose(0,2,1,3)
+            # Forward do prefill (RMSNorm+QKV, atenção causal, FFN) isolado em
+            # engine/mojo_kernels.py -- NumPy puro por padrão, kernel Mojo quando
+            # LITTLE_HAWK_MOJO_PREFILL=1 e o binding estiver disponível.
+            x,k_new,v_new,sm=prefill_layer_forward(x,layer,pos,self.inv_freq,causal,T,self.n_heads,self.d_k,self.d_model)
             # fase fill: slots 0..T-1 (sequenciais), imutáveis adiante
-            kc[0,:,:T,:]=k[0];vc[0,:,:T,:]=v[0]
-            qr=_rope(q,pos,self.inv_freq);kr=_rope(kc[:,:,:T,:],pos,self.inv_freq)
-            sc=(qr@kr.transpose(0,1,3,2))/math.sqrt(self.d_k)
-            sc=np.where(causal,sc,np.float32(-np.inf))
-            sc=sc-sc.max(axis=-1,keepdims=True);at=np.exp(sc);at/=at.sum(axis=-1,keepdims=True)
-            out=(at@v).transpose(0,2,1,3).reshape(1,T,self.d_model)@layer.W_o
-            x=x+out;x=x+layer.ffn(x)
-            if li==0:sm0=float(at[:,:,0,:].mean()*100)
+            kc[0,:,:T,:]=k_new;vc[0,:,:T,:]=v_new
+            if li==0:sm0=sm
             new_caches.append((kc,vc))
         xn=self._rms_norm(x[0,-1],self.norm_w)
         logits=(self.W_lm_t@xn.reshape(-1,1)).T
